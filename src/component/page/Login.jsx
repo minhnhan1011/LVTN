@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../asset/Login.css";
+import { GoogleLogin } from "@react-oauth/google";
+import { Link } from "react-router-dom";
 
 function Login() {
   const [formData, setFormData] = useState({
@@ -45,6 +47,39 @@ function Login() {
         alert("Có lỗi xảy ra trong quá trình đăng nhập.");
       });
   };
+
+const handleGoogleLoginSuccess = async (credentialResponse) => {
+  try {
+    const res = await axios.post(
+      "http://localhost:5000/google-login",
+      {
+        credential: credentialResponse.credential,
+      },
+      {
+        withCredentials: true,
+      }
+    );
+
+    if (res.data.status === "Success") {
+      const vaitro = res.data.user.VaiTro;
+
+      localStorage.setItem("VaiTro", vaitro);
+      alert("Đăng nhập Google thành công");
+
+      if (vaitro === "Admin") {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    } else {
+      alert("Đăng nhập Google thất bại");
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Có lỗi xảy ra trong quá trình đăng nhập.");
+  }
+};
+
   return (
     <div className="login-container">
       <form className="login-form" onSubmit={handleLogin}>
@@ -77,10 +112,15 @@ function Login() {
         </a>
 
         <hr />
+        <div className= "google-login-container">
+        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => {
+          alert("Đăng nhập thất bại");
+        }} />
+        </div>
 
-        <button type="button" className="create-btn">
+        <Link to="/signup" className="create-btn">
           Tạo tài khoản mới
-        </button>
+        </Link>
       </form>
     </div>
   );

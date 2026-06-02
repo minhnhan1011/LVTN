@@ -3,6 +3,9 @@ const mysql = require("mysql2");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
+const { OAuth2Client } = require("google-auth-library");
+const client = new OAuth2Client("796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com");
+const crypto = require("crypto");
 
 const app = expess();
 
@@ -132,6 +135,137 @@ app.post("/login", (req, res) => {
       return res.json({ status: "Fail" });
     },
   );
+});
+
+app.post("/google-login", async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: "796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com",
+    });
+
+    const payload = ticket.getPayload();
+
+    const email = payload.email;
+    const name = payload.name;
+
+    const sqlCheck = "SELECT * FROM NguoiDung WHERE Email = ?";
+
+    db.query(sqlCheck, [email], (err, data) => {
+      if (err) {
+        return res.json({ status: "Error" });
+      }
+
+      if (data.length > 0) {
+        const user = data[0];
+
+        const token = jwt.sign(
+          {
+            MaNguoiDung: user.MaNguoiDung,
+            HoTen: user.HoTen,
+            VaiTro: user.VaiTro,
+          },
+          "jwt-secret-key",
+          { expiresIn: "1h" }
+        );
+
+        res.cookie("token", token, {
+          httpOnly: true,
+          sameSite: "lax",
+        });
+
+        return res.json({
+          status: "Success",
+          user,
+        });
+      }
+
+      const sqlInsert = `
+        INSERT INTO NguoiDung
+        (HoTen, Email, MatKhau, SoDienThoai, VaiTro)
+        VALUES (?, ?, ?, ?, ?)
+      `;
+
+      db.query(
+        sqlInsert,
+        [name, email, "GOOGLE_LOGIN", "", "Customer"],
+        (err2, result) => {
+          if (err2) {
+            console.log(err2);
+            return res.json({ status: "Error" });
+          }
+
+          const newUser = {
+            MaNguoiDung: result.insertId,
+            HoTen: name,
+            Email: email,
+            VaiTro: "Customer",
+          };
+
+          const token = jwt.sign(
+            {
+              MaNguoiDung: newUser.MaNguoiDung,
+              HoTen: newUser.HoTen,
+              VaiTro: newUser.VaiTro,
+            },
+            "jwt-secret-key",
+            { expiresIn: "1h" }
+          );
+
+          res.cookie("token", token, {
+            httpOnly: true,
+            sameSite: "lax",
+          });
+
+          return res.json({
+            status: "Success",
+            user: newUser,
+          });
+        }
+      );
+    });
+  } catch (error) {
+    console.log(error);
+    return res.json({
+      status: "Error",
+      message: "Google token không hợp lệ",
+    });
+  }
+});
+
+app.post("/signup", (req, res) => {
+  const { HoTen, Email, SoDienThoai, MatKhau } = req.body;
+  const sqlCheck = "SELECT * FROM NguoiDung WHERE Email = ?";
+
+  db.query(sqlCheck, [Email], (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.json({ status: "Error" });
+    }
+    if (data.length > 0) {
+      return res.json({ status: "Fail", message: "Email đã tồn tại" });
+    }
+
+    const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    if (!gmailRegex.test(Email)) {
+      return res.json({ status: "Fail", message: "Vui lòng nhập đúng định dạng email" });
+    }
+
+    if (MatKhau.length < 6) {
+      return res.json({ status: "Fail", message: "Mật khẩu phải có ít nhất 6 ký tự" });
+    }
+
+    const sql = "INSERT INTO NguoiDung (HoTen, Email, SoDienThoai, MatKhau, VaiTro) VALUES (?, ?, ?, ?, 'Customer')";
+    db.query(sql, [HoTen, Email, SoDienThoai, MatKhau], (err, result) => {
+      if (err) {
+        console.log(err);
+        return res.json({ status: "Error" });
+      }
+      return res.json({ status: "Success" });
+    });
+  });
 });
 
 app.listen(5000, () => {
