@@ -83,7 +83,7 @@ const handleGoogleLoginSuccess = async (credentialResponse) => {
   return (
     <div className="login-container">
       <form className="login-form" onSubmit={handleLogin}>
-        <h1 className="logo">ĐĂNG NHẬP</h1>
+        <h1 className="logo-signin">ĐĂNG NHẬP</h1>
 
         <label>
           <input
