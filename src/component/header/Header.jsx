@@ -57,7 +57,9 @@ function Header() {
             </button>
           </>
         ) : (
-          <Link to="/login">👤</Link>
+          <Link to="/login" className="login-btn">
+            Đăng nhập
+          </Link>
         )}
       </div>
     </header>

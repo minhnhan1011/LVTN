@@ -268,6 +268,93 @@ app.post("/signup", (req, res) => {
   });
 });
 
+app.get("/admin/products", (req, res) => {
+  const sql = `
+    SELECT 
+      sp.MaSanPham,
+      sp.MaLoaiSanPham,
+      sp.MaMauSac,
+      sp.MaSize,
+      lsp.TenSanPham,
+      sp.DonGia,
+      sp.SoLuong,
+      ms.TenMauSac,
+      sz.TenSize,
+      th.TenThuongHieu
+    FROM sanpham sp
+    LEFT JOIN loaisanpham lsp 
+      ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+    LEFT JOIN mausac ms 
+      ON sp.MaMauSac = ms.MaMauSac
+    LEFT JOIN size sz 
+      ON sp.MaSize = sz.MaSize
+    LEFT JOIN thuonghieu th 
+      ON lsp.MaThuongHieu = th.MaThuongHieu
+  `;
+
+  db.query(sql, (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+
+app.post("/admin/products", (req, res) => {
+  const sql = `
+    INSERT INTO sanpham
+    (MaSanPham, MaLoaiSanPham, MaMauSac, MaSize, DonGia, SoLuong)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  const values = [
+    req.body.MaSanPham,
+    req.body.MaLoaiSanPham,
+    req.body.MaMauSac,
+    req.body.MaSize,
+    req.body.DonGia,
+    req.body.SoLuong,
+  ];
+
+  db.query(sql, values, (err, data) => {
+    if (err) return res.json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
+app.put("/admin/products/:id", (req, res) => {
+  const sql = `
+    UPDATE sanpham
+    SET MaLoaiSanPham = ?,
+        MaMauSac = ?,
+        MaSize = ?,
+        DonGia = ?,
+        SoLuong = ?
+    WHERE MaSanPham = ?
+  `;
+
+  const values = [
+    req.body.MaLoaiSanPham,
+    req.body.MaMauSac,
+    req.body.MaSize,
+    req.body.DonGia,
+    req.body.SoLuong,
+    req.params.id,
+  ];
+
+  db.query(sql, values, (err, data) => {
+    if (err) return res.json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
+app.delete("/admin/products/:id", (req, res) => {
+  const sql = "DELETE FROM sanpham WHERE MaSanPham = ?";
+
+  db.query(sql, [req.params.id], (err, data) => {
+    if (err) return res.json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
 app.listen(5000, () => {
   console.log("Server đang chạy trên cổng 5000");
 });
