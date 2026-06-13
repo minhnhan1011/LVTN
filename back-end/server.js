@@ -1,24 +1,42 @@
-const expess = require("express");
+const express = require("express");
 const mysql = require("mysql2");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const { OAuth2Client } = require("google-auth-library");
-const client = new OAuth2Client("796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com");
 const crypto = require("crypto");
+const multer = require("multer");
+const path = require("path");
 
-const app = expess();
+const client = new OAuth2Client(
+  "796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com",
+);
 
-app.use(expess.json());
+const app = express();
+
+app.use(express.json());
 app.use(cookieParser());
 
 app.use(
   cors({
     origin: "http://localhost:3000",
-    methods: ["POST", "GET"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }),
 );
+
+app.use("/uploads", express.static("uploads"));
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ storage });
 
 const db = mysql.createConnection({
   user: "root",
@@ -143,7 +161,8 @@ app.post("/google-login", async (req, res) => {
 
     const ticket = await client.verifyIdToken({
       idToken: credential,
-      audience: "796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com",
+      audience:
+        "796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com",
     });
 
     const payload = ticket.getPayload();
@@ -168,7 +187,7 @@ app.post("/google-login", async (req, res) => {
             VaiTro: user.VaiTro,
           },
           "jwt-secret-key",
-          { expiresIn: "1h" }
+          { expiresIn: "1h" },
         );
 
         res.cookie("token", token, {
@@ -211,7 +230,7 @@ app.post("/google-login", async (req, res) => {
               VaiTro: newUser.VaiTro,
             },
             "jwt-secret-key",
-            { expiresIn: "1h" }
+            { expiresIn: "1h" },
           );
 
           res.cookie("token", token, {
@@ -223,7 +242,7 @@ app.post("/google-login", async (req, res) => {
             status: "Success",
             user: newUser,
           });
-        }
+        },
       );
     });
   } catch (error) {
@@ -250,14 +269,21 @@ app.post("/signup", (req, res) => {
 
     const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
     if (!gmailRegex.test(Email)) {
-      return res.json({ status: "Fail", message: "Vui lòng nhập đúng định dạng email" });
+      return res.json({
+        status: "Fail",
+        message: "Vui lòng nhập đúng định dạng email",
+      });
     }
 
     if (MatKhau.length < 6) {
-      return res.json({ status: "Fail", message: "Mật khẩu phải có ít nhất 6 ký tự" });
+      return res.json({
+        status: "Fail",
+        message: "Mật khẩu phải có ít nhất 6 ký tự",
+      });
     }
 
-    const sql = "INSERT INTO NguoiDung (HoTen, Email, SoDienThoai, MatKhau, VaiTro) VALUES (?, ?, ?, ?, 'Customer')";
+    const sql =
+      "INSERT INTO NguoiDung (HoTen, Email, SoDienThoai, MatKhau, VaiTro) VALUES (?, ?, ?, ?, 'Customer')";
     db.query(sql, [HoTen, Email, SoDienThoai, MatKhau], (err, result) => {
       if (err) {
         console.log(err);
@@ -268,28 +294,55 @@ app.post("/signup", (req, res) => {
   });
 });
 
+app.get("/admin/product-types", (req, res) => {
+  db.query("SELECT * FROM loaisanpham", (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+
+app.get("/admin/brands", (req, res) => {
+  db.query("SELECT * FROM thuonghieu", (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+
+app.get("/admin/colors", (req, res) => {
+  db.query("SELECT * FROM mausac", (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+
+app.get("/admin/sizes", (req, res) => {
+  db.query("SELECT * FROM size", (err, data) => {
+    if (err) return res.json(err);
+    return res.json(data);
+  });
+});
+
 app.get("/admin/products", (req, res) => {
   const sql = `
     SELECT 
       sp.MaSanPham,
-      sp.MaLoaiSanPham,
-      sp.MaMauSac,
-      sp.MaSize,
-      lsp.TenSanPham,
-      sp.DonGia,
-      sp.SoLuong,
+      sp.TenSanPham,
+      sp.MoTa,
+      lsp.TenLoaiSanPham,
+      th.TenThuongHieu,
       ms.TenMauSac,
       sz.TenSize,
-      th.TenThuongHieu
+      sp.DonGia,
+      sp.SoLuong,
+      ha.DuongDan
     FROM sanpham sp
-    LEFT JOIN loaisanpham lsp 
-      ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
-    LEFT JOIN mausac ms 
-      ON sp.MaMauSac = ms.MaMauSac
-    LEFT JOIN size sz 
-      ON sp.MaSize = sz.MaSize
-    LEFT JOIN thuonghieu th 
-      ON lsp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN loaisanpham lsp ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN mausac ms ON sp.MaMauSac = ms.MaMauSac
+    LEFT JOIN size sz ON sp.MaSize = sz.MaSize
+    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    GROUP BY sp.MaSanPham
+    ORDER BY sp.MaSanPham DESC
   `;
 
   db.query(sql, (err, data) => {
@@ -298,60 +351,74 @@ app.get("/admin/products", (req, res) => {
   });
 });
 
-app.post("/admin/products", (req, res) => {
-  const sql = `
-    INSERT INTO sanpham
-    (MaSanPham, MaLoaiSanPham, MaMauSac, MaSize, DonGia, SoLuong)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `;
+app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
+  const sqlProduct = `
+  INSERT INTO sanpham
+  (TenSanPham, MaLoaiSanPham, MaThuongHieu, MaMauSac, MaSize, DonGia, SoLuong, MoTa)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+`;
 
   const values = [
-    req.body.MaSanPham,
+    req.body.TenSanPham,
     req.body.MaLoaiSanPham,
+    req.body.MaThuongHieu,
     req.body.MaMauSac,
     req.body.MaSize,
     req.body.DonGia,
     req.body.SoLuong,
+    req.body.MoTa,
   ];
 
-  db.query(sql, values, (err, data) => {
-    if (err) return res.json(err);
-    return res.json({ status: "Success" });
-  });
-});
+  db.query(sqlProduct, values, (err, data) => {
+    if (err) {
+      console.log("Lỗi thêm sản phẩm:", err);
+      return res.status(500).json(err);
+    }
 
-app.put("/admin/products/:id", (req, res) => {
-  const sql = `
-    UPDATE sanpham
-    SET MaLoaiSanPham = ?,
-        MaMauSac = ?,
-        MaSize = ?,
-        DonGia = ?,
-        SoLuong = ?
-    WHERE MaSanPham = ?
-  `;
+    const maSanPham = data.insertId;
 
-  const values = [
-    req.body.MaLoaiSanPham,
-    req.body.MaMauSac,
-    req.body.MaSize,
-    req.body.DonGia,
-    req.body.SoLuong,
-    req.params.id,
-  ];
+    if (!req.file) {
+      return res.json({ status: "Success" });
+    }
 
-  db.query(sql, values, (err, data) => {
-    if (err) return res.json(err);
-    return res.json({ status: "Success" });
+    const sqlImage = `
+      INSERT INTO hinhanh
+      (MaHinhAnh, MaSanPham, DuongDan)
+      VALUES (?, ?, ?)
+    `;
+
+    const imageValues = [
+      crypto.randomUUID(),
+      maSanPham,
+      `/uploads/${req.file.filename}`,
+    ];
+
+    db.query(sqlImage, imageValues, (err2) => {
+      if (err2) {
+        console.log("Lỗi thêm hình ảnh:", err2);
+        return res.status(500).json(err2);
+      }
+
+      return res.json({ status: "Success" });
+    });
   });
 });
 
 app.delete("/admin/products/:id", (req, res) => {
-  const sql = "DELETE FROM sanpham WHERE MaSanPham = ?";
+  const id = req.params.id;
 
-  db.query(sql, [req.params.id], (err, data) => {
-    if (err) return res.json(err);
-    return res.json({ status: "Success" });
+  const sqlDeleteImage = "DELETE FROM hinhanh WHERE MaSanPham = ?";
+
+  db.query(sqlDeleteImage, [id], (err) => {
+    if (err) return res.status(500).json(err);
+
+    const sqlDeleteProduct = "DELETE FROM sanpham WHERE MaSanPham = ?";
+
+    db.query(sqlDeleteProduct, [id], (err2) => {
+      if (err2) return res.status(500).json(err2);
+
+      return res.json({ status: "Success" });
+    });
   });
 });
 
