@@ -2,6 +2,7 @@ import "./Header.css";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 function Header() {
   const [name, setName] = useState("");
@@ -43,7 +44,7 @@ function Header() {
       {/* Menu */}
       <nav className="nav">
         <Link to="/">Trang chủ</Link>
-        <Link to="/">Sản phẩm</Link>
+        <Link to="/productpage">Sản phẩm</Link>
         <Link to="/">Liên hệ</Link>
       </nav>
 

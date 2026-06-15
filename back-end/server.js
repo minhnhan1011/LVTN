@@ -294,6 +294,66 @@ app.post("/signup", (req, res) => {
   });
 });
 
+// APi quan ly user
+app.get("/admin/users", (req, res) => {
+  const sql = `
+    SELECT 
+      MaNguoiDung,
+      HoTen,
+      Email,
+      SoDienThoai,
+      MatKhau,
+      VaiTro
+    FROM nguoidung
+    ORDER BY MaNguoiDung ASC
+  `;
+
+  db.query(sql, (err, data) => {
+    if (err) return res.status(500).json(err);
+    return res.json(data);
+  });
+});
+
+app.put("/admin/users/:id", (req, res) => {
+  const { id } = req.params;
+  const { HoTen, Email, MatKhau, SoDienThoai, VaiTro } = req.body;
+
+  const sql = `
+    UPDATE nguoidung
+    SET HoTen = ?, Email = ?, MatKhau = ?, SoDienThoai = ?, VaiTro = ?
+    WHERE MaNguoiDung = ?
+  `;
+
+  db.query(sql, [HoTen, Email, MatKhau, SoDienThoai, VaiTro, id], (err) => {
+    if (err) return res.status(500).json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
+app.delete("/admin/users/:id", (req, res) => {
+  const { id } = req.params;
+
+  const sql = "DELETE FROM nguoidung WHERE MaNguoiDung = ?";
+
+  db.query(sql, [id], (err) => {
+    if (err) return res.status(500).json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
+app.delete("/admin/users/:id", (req, res) => {
+  const { id } = req.params;
+
+  const sql = "DELETE FROM nguoidung WHERE MaNguoiDung = ?";
+
+  db.query(sql, [id], (err) => {
+    if (err) return res.status(500).json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
+// Api quan ly san pham
+
 app.get("/admin/product-types", (req, res) => {
   db.query("SELECT * FROM loaisanpham", (err, data) => {
     if (err) return res.json(err);

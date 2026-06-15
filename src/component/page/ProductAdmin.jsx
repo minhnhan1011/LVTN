@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import axios from "axios";
 import "../asset/Products.css";
 
-function Products() {
+function ProductAdmin() {
   const [showForm, setShowForm] = useState(false);
 
   const [products, setProducts] = useState([]);
@@ -299,4 +299,4 @@ function Products() {
   );
 }
 
-export default Products;
+export default ProductAdmin;

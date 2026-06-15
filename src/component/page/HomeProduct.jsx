@@ -38,7 +38,6 @@ function HomeProduct() {
             <div className="home-product-info">
               <h3>{item.TenSanPham}</h3>
               <p>{item.TenThuongHieu}</p>
-              <p>{item.MoTa}</p>
 
               <div className="home-product-bottom">
                 <span>{Number(item.DonGia).toLocaleString()}đ</span>
