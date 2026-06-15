@@ -352,32 +352,32 @@ app.delete("/admin/users/:id", (req, res) => {
   });
 });
 
-// Api quan ly san pham
+// API quản lý sản phẩm
 
 app.get("/admin/product-types", (req, res) => {
   db.query("SELECT * FROM loaisanpham", (err, data) => {
-    if (err) return res.json(err);
+    if (err) return res.status(500).json(err);
     return res.json(data);
   });
 });
 
 app.get("/admin/brands", (req, res) => {
   db.query("SELECT * FROM thuonghieu", (err, data) => {
-    if (err) return res.json(err);
+    if (err) return res.status(500).json(err);
     return res.json(data);
   });
 });
 
 app.get("/admin/colors", (req, res) => {
   db.query("SELECT * FROM mausac", (err, data) => {
-    if (err) return res.json(err);
+    if (err) return res.status(500).json(err);
     return res.json(data);
   });
 });
 
 app.get("/admin/sizes", (req, res) => {
   db.query("SELECT * FROM size", (err, data) => {
-    if (err) return res.json(err);
+    if (err) return res.status(500).json(err);
     return res.json(data);
   });
 });
@@ -388,48 +388,121 @@ app.get("/admin/products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.MoTa,
+      sp.DonGia,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
-      ms.TenMauSac,
-      sz.TenSize,
-      sp.DonGia,
-      sp.SoLuong,
-      ha.DuongDan
+      ha.DuongDan,
+      GROUP_CONCAT(
+        DISTINCT ms.TenMauSac
+        ORDER BY ms.TenMauSac
+        SEPARATOR ', '
+      ) AS DanhSachMau,
+      GROUP_CONCAT(
+        DISTINCT sz.TenSize
+        ORDER BY sz.TenSize
+        SEPARATOR ', '
+      ) AS DanhSachSize,
+      COALESCE(SUM(bt.SoLuong), 0) AS TongSoLuong
     FROM sanpham sp
-    LEFT JOIN loaisanpham lsp ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
-    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
-    LEFT JOIN mausac ms ON sp.MaMauSac = ms.MaMauSac
-    LEFT JOIN size sz ON sp.MaSize = sz.MaSize
-    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
-    GROUP BY sp.MaSanPham
+    LEFT JOIN loaisanpham lsp 
+      ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+    LEFT JOIN thuonghieu th 
+      ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN hinhanh ha 
+      ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN sanpham_bienthe bt 
+      ON sp.MaSanPham = bt.MaSanPham
+    LEFT JOIN mausac ms 
+      ON bt.MaMauSac = ms.MaMauSac
+    LEFT JOIN size sz 
+      ON bt.MaSize = sz.MaSize
+    GROUP BY 
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.MoTa,
+      sp.DonGia,
+      lsp.TenLoaiSanPham,
+      th.TenThuongHieu,
+      ha.DuongDan
     ORDER BY sp.MaSanPham DESC
   `;
 
   db.query(sql, (err, data) => {
-    if (err) return res.json(err);
+    if (err) {
+      console.log("Lỗi lấy sản phẩm:", err);
+      return res.status(500).json(err);
+    }
+
     return res.json(data);
   });
 });
 
 app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
-  const sqlProduct = `
-  INSERT INTO sanpham
-  (TenSanPham, MaLoaiSanPham, MaThuongHieu, MaMauSac, MaSize, DonGia, SoLuong, MoTa)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-`;
+  const {
+    TenSanPham,
+    MaLoaiSanPham,
+    MaThuongHieu,
+    DonGia,
+    MoTa,
+  } = req.body;
 
-  const values = [
-    req.body.TenSanPham,
-    req.body.MaLoaiSanPham,
-    req.body.MaThuongHieu,
-    req.body.MaMauSac,
-    req.body.MaSize,
-    req.body.DonGia,
-    req.body.SoLuong,
-    req.body.MoTa,
+  if (!TenSanPham || !MaLoaiSanPham || !MaThuongHieu || !DonGia) {
+    return res.status(400).json({
+      message: "Vui lòng nhập đầy đủ thông tin sản phẩm",
+    });
+  }
+
+  if (Number(DonGia) <= 0) {
+    return res.status(400).json({
+      message: "Đơn giá phải lớn hơn 0",
+    });
+  }
+
+  let variants = [];
+
+  try {
+    variants = JSON.parse(req.body.variants || "[]");
+  } catch (err) {
+    return res.status(400).json({
+      message: "Dữ liệu biến thể không hợp lệ",
+    });
+  }
+
+  if (variants.length === 0) {
+    return res.status(400).json({
+      message: "Vui lòng thêm ít nhất 1 biến thể sản phẩm",
+    });
+  }
+
+  for (let item of variants) {
+    if (!item.MaMauSac || !item.MaSize || item.SoLuong === "") {
+      return res.status(400).json({
+        message: "Biến thể phải có màu, size và số lượng",
+      });
+    }
+
+    if (Number(item.SoLuong) <= 0) {
+      return res.status(400).json({
+        message: "Số lượng phải lớn hơn 0",
+      });
+    }
+  }
+
+  const sqlProduct = `
+    INSERT INTO sanpham
+    (TenSanPham, MaLoaiSanPham, MaThuongHieu, DonGia, MoTa)
+    VALUES (?, ?, ?, ?, ?)
+  `;
+
+  const productValues = [
+    TenSanPham,
+    MaLoaiSanPham,
+    MaThuongHieu,
+    DonGia,
+    MoTa || "",
   ];
 
-  db.query(sqlProduct, values, (err, data) => {
+  db.query(sqlProduct, productValues, (err, data) => {
     if (err) {
       console.log("Lỗi thêm sản phẩm:", err);
       return res.status(500).json(err);
@@ -437,29 +510,49 @@ app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
 
     const maSanPham = data.insertId;
 
-    if (!req.file) {
-      return res.json({ status: "Success" });
-    }
-
-    const sqlImage = `
-      INSERT INTO hinhanh
-      (MaHinhAnh, MaSanPham, DuongDan)
-      VALUES (?, ?, ?)
+    const sqlVariant = `
+      INSERT INTO sanpham_bienthe
+      (MaSanPham, MaMauSac, MaSize, SoLuong)
+      VALUES ?
     `;
 
-    const imageValues = [
-      crypto.randomUUID(),
+    const variantValues = variants.map((item) => [
       maSanPham,
-      `/uploads/${req.file.filename}`,
-    ];
+      item.MaMauSac,
+      item.MaSize,
+      Number(item.SoLuong),
+    ]);
 
-    db.query(sqlImage, imageValues, (err2) => {
+    db.query(sqlVariant, [variantValues], (err2) => {
       if (err2) {
-        console.log("Lỗi thêm hình ảnh:", err2);
+        console.log("Lỗi thêm biến thể:", err2);
         return res.status(500).json(err2);
       }
 
-      return res.json({ status: "Success" });
+      if (!req.file) {
+        return res.json({ status: "Success" });
+      }
+
+      const sqlImage = `
+        INSERT INTO hinhanh
+        (MaHinhAnh, MaSanPham, DuongDan)
+        VALUES (?, ?, ?)
+      `;
+
+      const imageValues = [
+        crypto.randomUUID(),
+        maSanPham,
+        `/uploads/${req.file.filename}`,
+      ];
+
+      db.query(sqlImage, imageValues, (err3) => {
+        if (err3) {
+          console.log("Lỗi thêm hình ảnh:", err3);
+          return res.status(500).json(err3);
+        }
+
+        return res.json({ status: "Success" });
+      });
     });
   });
 });
@@ -467,17 +560,79 @@ app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
 app.delete("/admin/products/:id", (req, res) => {
   const id = req.params.id;
 
-  const sqlDeleteImage = "DELETE FROM hinhanh WHERE MaSanPham = ?";
+  const sqlDeleteVariant = "DELETE FROM sanpham_bienthe WHERE MaSanPham = ?";
 
-  db.query(sqlDeleteImage, [id], (err) => {
+  db.query(sqlDeleteVariant, [id], (err) => {
     if (err) return res.status(500).json(err);
 
-    const sqlDeleteProduct = "DELETE FROM sanpham WHERE MaSanPham = ?";
+    const sqlDeleteImage = "DELETE FROM hinhanh WHERE MaSanPham = ?";
 
-    db.query(sqlDeleteProduct, [id], (err2) => {
+    db.query(sqlDeleteImage, [id], (err2) => {
       if (err2) return res.status(500).json(err2);
 
-      return res.json({ status: "Success" });
+      const sqlDeleteProduct = "DELETE FROM sanpham WHERE MaSanPham = ?";
+
+      db.query(sqlDeleteProduct, [id], (err3) => {
+        if (err3) return res.status(500).json(err3);
+
+        return res.json({ status: "Success" });
+      });
+    });
+  });
+});
+
+
+
+// API lấy chi tiết sản phẩm
+app.get("/product/:id", (req, res) => {
+  const sqlProduct = `
+    SELECT
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.DonGia,
+      sp.MoTa,
+      lsp.TenLoaiSanPham,
+      th.TenThuongHieu,
+      ha.DuongDan
+    FROM sanpham sp
+    LEFT JOIN loaisanpham lsp
+      ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+    LEFT JOIN thuonghieu th
+      ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN hinhanh ha
+      ON sp.MaSanPham = ha.MaSanPham
+    WHERE sp.MaSanPham = ?
+    LIMIT 1
+  `;
+
+  db.query(sqlProduct, [req.params.id], (err, productData) => {
+    if (err) return res.status(500).json(err);
+
+    if (productData.length === 0) {
+      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+    }
+
+    const sqlVariants = `
+      SELECT
+        bt.MaBienThe,
+        bt.MaMauSac,
+        ms.TenMauSac,
+        bt.MaSize,
+        sz.TenSize,
+        bt.SoLuong
+      FROM sanpham_bienthe bt
+      LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
+      LEFT JOIN size sz ON bt.MaSize = sz.MaSize
+      WHERE bt.MaSanPham = ?
+    `;
+
+    db.query(sqlVariants, [req.params.id], (err2, variantData) => {
+      if (err2) return res.status(500).json(err2);
+
+      return res.json({
+        ...productData[0],
+        variants: variantData,
+      });
     });
   });
 });

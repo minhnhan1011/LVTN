@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import "../asset/Products.css";
+import "../asset/ProductsAdmin.css";
 
 function ProductAdmin() {
   const [showForm, setShowForm] = useState(false);
@@ -12,33 +12,30 @@ function ProductAdmin() {
   const [colors, setColors] = useState([]);
   const [sizes, setSizes] = useState([]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
-
-    try {
-      await axios.delete(`http://localhost:5000/admin/products/${id}`);
-      alert("Xóa thành công");
-      fetchProducts();
-    } catch (err) {
-      console.log(err);
-      alert("Xóa thất bại");
-    }
-  };
-
   const [values, setValues] = useState({
     TenSanPham: "",
     MaLoaiSanPham: "",
     MaThuongHieu: "",
-    MaMauSac: "",
-    MaSize: "",
     DonGia: "",
-    SoLuong: "",
+    MoTa: "",
     HinhAnh: null,
   });
 
+  const [variants, setVariants] = useState([
+    {
+      MaMauSac: "",
+      MaSize: "",
+      SoLuong: "",
+    },
+  ]);
+
   const fetchProducts = async () => {
-    const res = await axios.get("http://localhost:5000/admin/products");
-    setProducts(res.data);
+    try {
+      const res = await axios.get("http://localhost:5000/admin/products");
+      setProducts(res.data);
+    } catch (err) {
+      console.log("Lỗi lấy sản phẩm:", err);
+    }
   };
 
   useEffect(() => {
@@ -75,43 +72,116 @@ function ProductAdmin() {
     });
   };
 
+  const handleVariantChange = (index, e) => {
+    const newVariants = [...variants];
+
+    newVariants[index] = {
+      ...newVariants[index],
+      [e.target.name]: e.target.value,
+    };
+
+    setVariants(newVariants);
+  };
+
+  const addVariant = () => {
+    setVariants([
+      ...variants,
+      {
+        MaMauSac: "",
+        MaSize: "",
+        SoLuong: "",
+      },
+    ]);
+  };
+
+  const removeVariant = (index) => {
+    if (variants.length === 1) {
+      alert("Phải có ít nhất 1 biến thể");
+      return;
+    }
+
+    const newVariants = variants.filter((_, i) => i !== index);
+    setVariants(newVariants);
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/admin/products/${id}`);
+      alert("Xóa thành công");
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+      alert("Xóa thất bại");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (Number(values.DonGia) <= 0) {
+      alert("Đơn giá phải lớn hơn 0");
+      return;
+    }
+
+    for (let item of variants) {
+      if (!item.MaMauSac || !item.MaSize || item.SoLuong === "") {
+        alert("Vui lòng nhập đầy đủ màu, size và số lượng");
+        return;
+      }
+
+      if (Number(item.SoLuong) <= 0) {
+        alert("Số lượng phải lớn hơn 0");
+        return;
+      }
+    }
 
     const formData = new FormData();
 
     formData.append("TenSanPham", values.TenSanPham);
     formData.append("MaLoaiSanPham", values.MaLoaiSanPham);
     formData.append("MaThuongHieu", values.MaThuongHieu);
-    formData.append("MaMauSac", values.MaMauSac);
-    formData.append("MaSize", values.MaSize);
     formData.append("DonGia", values.DonGia);
-    formData.append("SoLuong", values.SoLuong);
     formData.append("MoTa", values.MoTa);
-    formData.append("HinhAnh", values.HinhAnh);
+    formData.append("variants", JSON.stringify(variants));
 
-    await axios.post("http://localhost:5000/admin/products", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    if (values.HinhAnh) {
+      formData.append("HinhAnh", values.HinhAnh);
+    }
 
-    alert("Thêm sản phẩm thành công");
+    try {
+      await axios.post("http://localhost:5000/admin/products", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    setValues({
-      TenSanPham: "",
-      MaLoaiSanPham: "",
-      MaThuongHieu: "",
-      MaMauSac: "",
-      MaSize: "",
-      DonGia: "",
-      SoLuong: "",
-      MoTa: "",
-      HinhAnh: null,
-    });
+      alert("Thêm sản phẩm thành công");
 
-    setShowForm(false);
-    fetchProducts();
+      setValues({
+        TenSanPham: "",
+        MaLoaiSanPham: "",
+        MaThuongHieu: "",
+        DonGia: "",
+        MoTa: "",
+        HinhAnh: null,
+      });
+
+      setVariants([
+        {
+          MaMauSac: "",
+          MaSize: "",
+          SoLuong: "",
+        },
+      ]);
+
+      setShowForm(false);
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+      alert(err.response?.data?.message || "Thêm sản phẩm thất bại");
+    }
   };
 
   return (
@@ -179,48 +249,12 @@ function ProductAdmin() {
               ))}
             </select>
 
-            <select
-              name="MaMauSac"
-              value={values.MaMauSac}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Chọn màu sắc</option>
-              {colors.map((item) => (
-                <option key={item.MaMauSac} value={item.MaMauSac}>
-                  {item.TenMauSac}
-                </option>
-              ))}
-            </select>
-
-            <select
-              name="MaSize"
-              value={values.MaSize}
-              onChange={handleChange}
-              required
-            >
-              <option value="">Chọn size</option>
-              {sizes.map((item) => (
-                <option key={item.MaSize} value={item.MaSize}>
-                  {item.TenSize}
-                </option>
-              ))}
-            </select>
-
             <input
               type="number"
               name="DonGia"
+              min="1"
               placeholder="Đơn giá"
               value={values.DonGia}
-              onChange={handleChange}
-              required
-            />
-
-            <input
-              type="number"
-              name="SoLuong"
-              placeholder="Số lượng"
-              value={values.SoLuong}
               onChange={handleChange}
               required
             />
@@ -240,6 +274,68 @@ function ProductAdmin() {
               required
             />
 
+            <div className="variant-box">
+              <h3>Biến thể sản phẩm</h3>
+
+              {variants.map((variant, index) => (
+                <div className="variant-row" key={index}>
+                  <select
+                    name="MaMauSac"
+                    value={variant.MaMauSac}
+                    onChange={(e) => handleVariantChange(index, e)}
+                    required
+                  >
+                    <option value="">Chọn màu</option>
+                    {colors.map((item) => (
+                      <option key={item.MaMauSac} value={item.MaMauSac}>
+                        {item.TenMauSac}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    name="MaSize"
+                    value={variant.MaSize}
+                    onChange={(e) => handleVariantChange(index, e)}
+                    required
+                  >
+                    <option value="">Chọn size</option>
+                    {sizes.map((item) => (
+                      <option key={item.MaSize} value={item.MaSize}>
+                        {item.TenSize}
+                      </option>
+                    ))}
+                  </select>
+
+                  <input
+                    type="number"
+                    name="SoLuong"
+                    min="1"
+                    placeholder="Số lượng"
+                    value={variant.SoLuong}
+                    onChange={(e) => handleVariantChange(index, e)}
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    className="variant-remove-btn"
+                    onClick={() => removeVariant(index)}
+                  >
+                    Xóa
+                  </button>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="variant-add-btn"
+                onClick={addVariant}
+              >
+                + Thêm màu / size
+              </button>
+            </div>
+
             <button type="submit" className="admin-submit-btn">
               Lưu sản phẩm
             </button>
@@ -258,7 +354,7 @@ function ProductAdmin() {
               <th>Size</th>
               <th>Giá</th>
               <th>Mô tả</th>
-              <th>Số lượng</th>
+              <th>Tổng SL</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -275,17 +371,20 @@ function ProductAdmin() {
                     />
                   )}
                 </td>
+
                 <td>{item.MaSanPham}</td>
                 <td>{item.TenSanPham}</td>
                 <td>{item.TenLoaiSanPham}</td>
                 <td>{item.TenThuongHieu}</td>
-                <td>{item.TenMauSac}</td>
-                <td>{item.TenSize}</td>
+                <td>{item.DanhSachMau}</td>
+                <td>{item.DanhSachSize}</td>
                 <td>{Number(item.DonGia).toLocaleString()}đ</td>
                 <td>{item.MoTa}</td>
-                <td>{item.SoLuong}</td>
+                <td>{item.TongSoLuong}</td>
+
                 <td>
                   <button>Sửa</button>
+
                   <button onClick={() => handleDelete(item.MaSanPham)}>
                     Xóa
                   </button>

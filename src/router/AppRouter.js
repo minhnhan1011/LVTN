@@ -5,6 +5,7 @@ import AdminPage from "../component/page/AdminPage";
 import Signup from "../component/page/Signup";
 import ProductAdmin from "../component/page/ProductAdmin";
 import ProductPage from "../component/page/ProductPage";
+import DetailProduct from "../component/page/DetailProduct";
 
 function AppRouter() {
     return (
@@ -16,6 +17,7 @@ function AppRouter() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/products" element={<ProductAdmin />} />
         <Route path="/productpage" element={<ProductPage />} />
+        <Route path="/detailproduct/:id" element={<DetailProduct />} />
       </Routes>
     </BrowserRouter>
   );

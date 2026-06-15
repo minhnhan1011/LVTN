@@ -1,0 +1,243 @@
+.admin-page {
+  min-height: 100vh;
+  display: flex;
+  background: #f4f6f8;
+  font-family: Arial, sans-serif;
+}
+
+.admin-sidebar {
+  width: 240px;
+  background: #111827;
+  color: white;
+  padding: 25px 20px;
+}
+
+.admin-sidebar h2 {
+  font-size: 26px;
+  margin-bottom: 35px;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.admin-nav a {
+  color: #d1d5db;
+  text-decoration: none;
+  padding: 12px 14px;
+  border-radius: 8px;
+}
+
+.admin-nav a:hover {
+  background: #1f2937;
+  color: white;
+}
+
+.admin-content {
+  flex: 1;
+  padding: 35px;
+  overflow-x: auto;
+}
+
+.admin-product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.admin-product-header h1 {
+  color: #111827;
+}
+
+.admin-add-btn {
+  background: #111827;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.admin-product-form {
+  background: white;
+  padding: 25px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.admin-product-form h2 {
+  grid-column: 1 / -1;
+  color: #111827;
+}
+
+.admin-product-form input,
+.admin-product-form select,
+.admin-product-form textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 14px;
+  outline: none;
+}
+
+.admin-product-form input:focus,
+.admin-product-form select:focus,
+.admin-product-form textarea:focus {
+  border-color: #2563eb;
+}
+
+.admin-product-form textarea {
+  grid-column: 1 / -1;
+  min-height: 100px;
+  resize: vertical;
+}
+
+.variant-box {
+  grid-column: 1 / -1;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  border-radius: 14px;
+}
+
+.variant-box h3 {
+  margin-bottom: 15px;
+  color: #111827;
+}
+
+.variant-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.variant-row select,
+.variant-row input {
+  height: 45px;
+}
+
+.variant-add-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 12px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.variant-remove-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 0 16px;
+  height: 45px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.admin-submit-btn {
+  grid-column: 1 / -1;
+  padding: 14px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-product-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+}
+
+.admin-product-table thead {
+  background: #111827;
+  color: white;
+}
+
+.admin-product-table th,
+.admin-product-table td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+.admin-product-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.admin-product-table img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #f3f4f6;
+}
+
+.admin-product-table button {
+  border: none;
+  padding: 9px 14px;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  margin-right: 6px;
+  font-weight: 600;
+}
+
+.admin-product-table button:first-child {
+  background: #2563eb;
+}
+
+.admin-product-table button:last-child {
+  background: #ef4444;
+}
+
+.admin-product-table button:first-child:hover {
+  background: #1d4ed8;
+}
+
+.admin-product-table button:last-child:hover {
+  background: #dc2626;
+}
+
+@media (max-width: 1000px) {
+  .admin-page {
+    flex-direction: column;
+  }
+
+  .admin-sidebar {
+    width: 100%;
+  }
+
+  .admin-product-form {
+    grid-template-columns: 1fr;
+  }
+
+  .variant-row {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-product-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

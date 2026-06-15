@@ -1,50 +1,70 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import "../asset/HomeProduct.css";
 
 function HomeProduct() {
   const [products, setProducts] = useState([]);
 
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(
+        "http://localhost:5000/admin/products"
+      );
+
+      setProducts(res.data.slice(0, 8));
+    } catch (err) {
+      console.log("Lỗi lấy sản phẩm:", err);
+    }
+  };
+
   useEffect(() => {
-    axios
-      .get("http://localhost:5000/admin/products")
-      .then((res) => {
-        setProducts(res.data);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+    fetchProducts();
   }, []);
 
   return (
     <section className="home-products">
       <div className="home-products-header">
-        <p>SẢN PHẨM MỚI</p>
+        <span>SẢN PHẨM MỚI</span>
         <h2>Giày mới nhất</h2>
       </div>
 
       <div className="home-product-list">
         {products.map((item) => (
-          <div className="home-product-card" key={item.MaSanPham}>
+          <Link
+            to={`/detailproduct/${item.MaSanPham}`}
+            className="home-product-card"
+            key={item.MaSanPham}
+          >
             <div className="home-product-img">
-              {item.DuongDan && (
-                <img
-                  src={`http://localhost:5000${item.DuongDan}`}
-                  alt={item.TenSanPham}
-                />
-              )}
+              <img
+                src={
+                  item.DuongDan
+                    ? `http://localhost:5000${item.DuongDan}`
+                    : "/no-image.png"
+                }
+                alt={item.TenSanPham}
+              />
             </div>
 
             <div className="home-product-info">
               <h3>{item.TenSanPham}</h3>
-              <p>{item.TenThuongHieu}</p>
+
+              <p className="brand">
+                {item.TenThuongHieu}
+              </p>
 
               <div className="home-product-bottom">
-                <span>{Number(item.DonGia).toLocaleString()}đ</span>
-                <button>Xem</button>
+                <span>
+                  {Number(item.DonGia).toLocaleString()}đ
+                </span>
+
+                <button type="button">
+                  Xem chi tiết
+                </button>
               </div>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
