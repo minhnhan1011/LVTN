@@ -637,6 +637,151 @@ app.get("/product/:id", (req, res) => {
   });
 });
 
+// api gio hang
+app.post("/cart", (req, res) => {
+  const { MaNguoiDung, MaBienThe, SoLuong } = req.body;
+
+  if (!MaNguoiDung || !MaBienThe || Number(SoLuong) <= 0) {
+    return res.status(400).json({ message: "Dữ liệu giỏ hàng không hợp lệ" });
+  }
+
+  const sqlFindCart = `
+    SELECT MaGioHang 
+    FROM giohang 
+    WHERE MaNguoiDung = ?
+  `;
+
+  db.query(sqlFindCart, [MaNguoiDung], (err, cartData) => {
+    if (err) return res.status(500).json(err);
+
+    const handleCartDetail = (maGioHang) => {
+      const sqlCheckItem = `
+        SELECT * 
+        FROM giohangchitiet
+        WHERE MaGioHang = ? AND MaBienThe = ?
+      `;
+
+      db.query(sqlCheckItem, [maGioHang, MaBienThe], (err2, itemData) => {
+        if (err2) return res.status(500).json(err2);
+
+        if (itemData.length > 0) {
+          const sqlUpdate = `
+            UPDATE giohangchitiet
+            SET SoLuong = SoLuong + ?
+            WHERE MaGioHang = ? AND MaBienThe = ?
+          `;
+
+          db.query(sqlUpdate, [SoLuong, maGioHang, MaBienThe], (err3) => {
+            if (err3) return res.status(500).json(err3);
+            return res.json({ status: "Success" });
+          });
+        } else {
+          const sqlPrice = `
+            SELECT sp.DonGia
+            FROM sanpham_bienthe bt
+            JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
+            WHERE bt.MaBienThe = ?
+          `;
+
+          db.query(sqlPrice, [MaBienThe], (err4, priceData) => {
+            if (err4) return res.status(500).json(err4);
+            if (priceData.length === 0) {
+              return res.status(404).json({ message: "Không tìm thấy biến thể" });
+            }
+
+            const sqlInsertItem = `
+              INSERT INTO giohangchitiet
+              (MaGioHangChiTiet, MaGioHang, MaBienThe, SoLuong, DonGia)
+              VALUES (?, ?, ?, ?, ?)
+            `;
+
+            db.query(
+              sqlInsertItem,
+              [
+                crypto.randomUUID(),
+                maGioHang,
+                MaBienThe,
+                SoLuong,
+                priceData[0].DonGia,
+              ],
+              (err5) => {
+                if (err5) return res.status(500).json(err5);
+                return res.json({ status: "Success" });
+              }
+            );
+          });
+        }
+      });
+    };
+
+    if (cartData.length > 0) {
+      handleCartDetail(cartData[0].MaGioHang);
+    } else {
+      const maGioHang = crypto.randomUUID();
+
+      const sqlCreateCart = `
+        INSERT INTO giohang (MaGioHang, MaNguoiDung, TongTien)
+        VALUES (?, ?, 0)
+      `;
+
+      db.query(sqlCreateCart, [maGioHang, MaNguoiDung], (err6) => {
+        if (err6) return res.status(500).json(err6);
+        handleCartDetail(maGioHang);
+      });
+    }
+  });
+});
+
+app.get("/cart/:MaNguoiDung", (req, res) => {
+  const sql = `
+    SELECT
+      ghct.MaGioHangChiTiet,
+      ghct.SoLuong,
+      ghct.DonGia,
+      sp.TenSanPham,
+      sp.MaSanPham,
+      ms.TenMauSac,
+      sz.TenSize,
+      ha.DuongDan
+    FROM giohang gh
+    JOIN giohangchitiet ghct ON gh.MaGioHang = ghct.MaGioHang
+    JOIN sanpham_bienthe bt ON ghct.MaBienThe = bt.MaBienThe
+    JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
+    JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
+    JOIN size sz ON bt.MaSize = sz.MaSize
+    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    WHERE gh.MaNguoiDung = ?
+  `;
+
+  db.query(sql, [req.params.MaNguoiDung], (err, data) => {
+    if (err) return res.status(500).json(err);
+    return res.json(data);
+  });
+});
+
+app.put("/cart/detail/:id", (req, res) => {
+  const { id } = req.params;
+  const { SoLuong } = req.body;
+
+  if (Number(SoLuong) <= 0) {
+    return res.status(400).json({
+      message: "Số lượng phải lớn hơn 0",
+    });
+  }
+
+  const sql = `
+    UPDATE giohangchitiet
+    SET SoLuong = ?
+    WHERE MaGioHangChiTiet = ?
+  `;
+
+  db.query(sql, [SoLuong, id], (err) => {
+    if (err) return res.status(500).json(err);
+
+    return res.json({ status: "Success" });
+  });
+});
+
 app.listen(5000, () => {
   console.log("Server đang chạy trên cổng 5000");
 });

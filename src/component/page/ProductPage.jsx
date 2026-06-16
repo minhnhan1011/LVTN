@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Header from "../header/Header";
 import axios from "axios";
+import { Link } from "react-router-dom";
 import "../asset/ProductPage.css";
 
 function ProductPage() {
@@ -172,8 +173,10 @@ function ProductPage() {
                   <p>Màu: {item.TenMauSac}</p>
 
                   <strong>{Number(item.DonGia).toLocaleString()}đ</strong>
-
-                  <button>Xem chi tiết</button>
+                  
+                  <Link to={`/detailproduct/${item.MaSanPham}`}>
+                    <button>Xem chi tiết</button>
+                  </Link>
                 </div>
               </div>
             ))}

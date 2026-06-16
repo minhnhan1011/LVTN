@@ -2,12 +2,10 @@ import "./Header.css";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
 
 function Header() {
   const [name, setName] = useState("");
   const [auth, setAuth] = useState(false);
-  const [id_user, setId_user] = useState("");
 
   axios.defaults.withCredentials = true;
 
@@ -19,43 +17,39 @@ function Header() {
   };
 
   useEffect(() => {
-    const checkToken = async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/auth", { withCredentials: true });
+    axios
+      .get("http://localhost:5000/auth", { withCredentials: true })
+      .then((res) => {
         if (res.data.Status === "Success") {
           setAuth(true);
           setName(res.data.HoTen);
-          setId_user(res.data.MaNguoiDung);
+          localStorage.setItem("MaNguoiDung", res.data.MaNguoiDung);
         } else {
           setAuth(false);
         }
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    checkToken();
+      })
+      .catch((err) => console.log(err));
   }, []);
 
   return (
     <header className="header">
-      {/* Logo */}
       <div className="logo">ShoeStore</div>
 
-      {/* Menu */}
       <nav className="nav">
         <Link to="/">Trang chủ</Link>
         <Link to="/productpage">Sản phẩm</Link>
         <Link to="/">Liên hệ</Link>
       </nav>
 
-      {/* Auth */}
       <div className="auth">
+        <Link to="/cart" className="cart-btn">
+          Giỏ hàng
+        </Link>
+
         {auth ? (
           <>
-            <span className="text-white">Xin chào, {name}</span>
-            <button type="submit" onClick={handleLogout}>
-              Đăng xuất
-            </button>
+            <span>Xin chào, {name}</span>
+            <button onClick={handleLogout}>Đăng xuất</button>
           </>
         ) : (
           <Link to="/login" className="login-btn">

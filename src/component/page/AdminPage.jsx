@@ -7,6 +7,13 @@ function AdminPage() {
   const [users, setUsers] = useState([]);
   const [showEdit, setShowEdit] = useState(false);
 
+  const handleLogout = () => {
+    axios
+      .get("http://localhost:5000/logout")
+      .then(() => window.location.reload(true))
+      .catch((err) => console.log(err));
+  };
+
   const [editUser, setEditUser] = useState({
     MaNguoiDung: "",
     HoTen: "",
@@ -87,7 +94,9 @@ function AdminPage() {
         <nav className="admin-nav">
           <Link to="/admin">Quản lý User</Link>
           <Link to="/admin/products">Quản lý sản phẩm</Link>
-          <Link to="/">Về trang chủ</Link>
+          <Link to="/" onClick={handleLogout}>
+            Dang xuat
+          </Link>
         </nav>
       </aside>
 
