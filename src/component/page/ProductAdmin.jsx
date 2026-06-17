@@ -6,6 +6,7 @@ import "../asset/ProductsAdmin.css";
 function ProductAdmin() {
   const [showForm, setShowForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [showVariantForm, setShowVariantForm] = useState(false);
 
   const [products, setProducts] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
@@ -35,6 +36,9 @@ function ProductAdmin() {
     MoTa: "",
     KhuyenMai: 0,
   });
+
+  const [currentProductId, setCurrentProductId] = useState("");
+  const [editVariants, setEditVariants] = useState([]);
 
   const handleLogout = () => {
     axios
@@ -165,6 +169,7 @@ function ProductAdmin() {
   const handleEditClick = (item) => {
     setShowEditForm(true);
     setShowForm(false);
+    setShowVariantForm(false);
 
     setEditValues({
       MaSanPham: item.MaSanPham,
@@ -212,6 +217,65 @@ function ProductAdmin() {
     }
   };
 
+  const handleEditVariantClick = async (item) => {
+    setShowVariantForm(true);
+    setShowEditForm(false);
+    setShowForm(false);
+    setCurrentProductId(item.MaSanPham);
+
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/admin/products/${item.MaSanPham}/variants`
+      );
+
+      setEditVariants(res.data);
+    } catch (err) {
+      console.log(err);
+      alert("Lỗi lấy biến thể sản phẩm");
+    }
+  };
+
+  const handleEditVariantChange = (index, e) => {
+    const newVariants = [...editVariants];
+
+    newVariants[index] = {
+      ...newVariants[index],
+      [e.target.name]: e.target.value,
+    };
+
+    setEditVariants(newVariants);
+  };
+
+  const handleUpdateVariants = async (e) => {
+    e.preventDefault();
+
+    for (let item of editVariants) {
+      if (!item.MaMauSac || !item.MaSize || item.SoLuong === "") {
+        alert("Vui lòng nhập đầy đủ màu, size và số lượng");
+        return;
+      }
+
+      if (Number(item.SoLuong) < 0) {
+        alert("Số lượng không được nhỏ hơn 0");
+        return;
+      }
+    }
+
+    try {
+      await axios.put(
+        `http://localhost:5000/admin/products/${currentProductId}/variants`,
+        { variants: editVariants }
+      );
+
+      alert("Cập nhật biến thể thành công");
+      setShowVariantForm(false);
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+      alert(err.response?.data?.message || "Cập nhật biến thể thất bại");
+    }
+  };
+
   const handleDelete = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
 
@@ -252,6 +316,7 @@ function ProductAdmin() {
             onClick={() => {
               setShowForm(!showForm);
               setShowEditForm(false);
+              setShowVariantForm(false);
             }}
           >
             {showForm ? "Đóng" : "+ Thêm sản phẩm"}
@@ -486,6 +551,71 @@ function ProductAdmin() {
           </form>
         )}
 
+        {showVariantForm && (
+          <form
+            className="admin-product-form variant-form"
+            onSubmit={handleUpdateVariants}
+          >
+            <h2 className="variant-form-title">Quản lý tồn kho sản phẩm</h2>
+
+            {editVariants.map((variant, index) => (
+              <div className="variant-row" key={variant.MaBienThe}>
+                <select
+                  name="MaMauSac"
+                  value={variant.MaMauSac}
+                  onChange={(e) => handleEditVariantChange(index, e)}
+                  required
+                >
+                  <option value="">Chọn màu</option>
+                  {colors.map((item) => (
+                    <option key={item.MaMauSac} value={item.MaMauSac}>
+                      {item.TenMauSac}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  name="MaSize"
+                  value={variant.MaSize}
+                  onChange={(e) => handleEditVariantChange(index, e)}
+                  required
+                >
+                  <option value="">Chọn size</option>
+                  {sizes.map((item) => (
+                    <option key={item.MaSize} value={item.MaSize}>
+                      {item.TenSize}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="number"
+                  name="SoLuong"
+                  min="0"
+                  placeholder="Số lượng"
+                  value={variant.SoLuong}
+                  onChange={(e) => handleEditVariantChange(index, e)}
+                  required
+                />
+              </div>
+            ))}
+
+            <div className="variant-actions">
+              <button type="submit" className="variant-save-btn">
+                Lưu tồn kho
+              </button>
+
+              <button
+                type="button"
+                className="variant-cancel-btn"
+                onClick={() => setShowVariantForm(false)}
+              >
+                Hủy
+              </button>
+            </div>
+          </form>
+        )}
+
         <table className="admin-product-table">
           <thead>
             <tr>
@@ -537,7 +667,11 @@ function ProductAdmin() {
                 <td>{item.TongSoLuong}</td>
 
                 <td>
-                  <button onClick={() => handleEditClick(item)}>Sửa</button>
+                  <button onClick={() => handleEditClick(item)}>Sửa SP</button>
+
+                  <button onClick={() => handleEditVariantClick(item)}>
+                    Sửa biến thể
+                  </button>
 
                   <button onClick={() => handleDelete(item.MaSanPham)}>
                     Xóa

@@ -25,32 +25,57 @@ function HomeProduct() {
       .catch((err) => console.log(err));
   }, []);
 
+  const calcDiscountPrice = (price, discount) => {
+    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  };
 
-  // render card san pham de qua trang chi tiet san pham
-  const renderCard = (item) => (
-    <Link
-      key={item.MaSanPham}
-      to={`/detailproduct/${item.MaSanPham}`}
-      className="home-product-card"
-    >
-      <div className="home-product-img">
-        <img
-          src={
-            item.DuongDan
-              ? `http://localhost:5000${item.DuongDan}`
-              : "/no-image.png"
-          }
-          alt={item.TenSanPham}
-        />
-      </div>
+  const renderCard = (item) => {
+    const finalPrice = calcDiscountPrice(item.DonGia || 0, item.KhuyenMai || 0);
 
-      <div className="home-product-info">
-        <h3>{item.TenSanPham}</h3>
-        <p>{item.TenThuongHieu}</p>
-        <strong>{Number(item.DonGia).toLocaleString()}đ</strong>
-      </div>
-    </Link>
-  );
+    return (
+      <Link
+        key={item.MaSanPham}
+        to={`/detailproduct/${item.MaSanPham}`}
+        className="home-product-card"
+      >
+        <div className="home-product-img">
+          <img
+            src={
+              item.DuongDan
+                ? `http://localhost:5000${item.DuongDan}`
+                : "/no-image.png"
+            }
+            alt={item.TenSanPham}
+          />
+
+          {Number(item.KhuyenMai) > 0 && (
+            <span className="home-discount-badge">-{item.KhuyenMai}%</span>
+          )}
+        </div>
+
+        <div className="home-product-info">
+          <h3>{item.TenSanPham}</h3>
+          <p>{item.TenThuongHieu}</p>
+
+          {Number(item.KhuyenMai) > 0 ? (
+            <div className="home-price-box">
+              <span className="home-old-price">
+                {Number(item.DonGia).toLocaleString()}đ
+              </span>
+
+              <strong className="home-sale-price">
+                {finalPrice.toLocaleString()}đ
+              </strong>
+            </div>
+          ) : (
+            <strong className="home-sale-price">
+              {Number(item.DonGia).toLocaleString()}đ
+            </strong>
+          )}
+        </div>
+      </Link>
+    );
+  };
 
   return (
     <>
@@ -60,9 +85,7 @@ function HomeProduct() {
           <h2>Giày mới nhất</h2>
         </div>
 
-        <div className="home-product-grid">
-          {newProducts.map(renderCard)}
-        </div>
+        <div className="home-product-grid">{newProducts.map(renderCard)}</div>
       </section>
 
       <section className="home-products">
@@ -72,15 +95,12 @@ function HomeProduct() {
             <h2>Nike mới nhất</h2>
           </div>
 
-          {/* truyen thuong hieu de loc san pham qua trang productpage */}
           <Link to="/productpage?brand=Nike" className="view-more-btn">
             Xem thêm
           </Link>
         </div>
 
-        <div className="home-product-scroll">
-          {nikeProducts.map(renderCard)}
-        </div>
+        <div className="home-product-scroll">{nikeProducts.map(renderCard)}</div>
       </section>
 
       <section className="home-products">

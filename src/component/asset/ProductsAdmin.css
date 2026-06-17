@@ -198,6 +198,7 @@
   padding: 9px 14px;
   border-radius: 8px;
   color: white;
+  background: #2563eb;
   cursor: pointer;
   margin-right: 6px;
   font-weight: 600;
@@ -239,5 +240,72 @@
   .admin-product-table {
     display: block;
     overflow-x: auto;
+  }
+}
+
+.variant-form {
+  grid-template-columns: 1fr;
+}
+
+.variant-form-title {
+  color: #111827;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.variant-form .variant-row {
+  grid-template-columns: 1fr 1fr 160px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 0;
+}
+
+.variant-form .variant-row select,
+.variant-form .variant-row input {
+  height: 46px;
+  background: white;
+}
+
+.variant-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.variant-save-btn,
+.variant-cancel-btn {
+  padding: 13px 20px;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.variant-save-btn {
+  background: #10b981;
+}
+
+.variant-save-btn:hover {
+  background: #059669;
+}
+
+.variant-cancel-btn {
+  background: #ef4444;
+}
+
+.variant-cancel-btn:hover {
+  background: #dc2626;
+}
+
+@media (max-width: 1000px) {
+  .variant-form .variant-row {
+    grid-template-columns: 1fr;
+  }
+
+  .variant-actions {
+    flex-direction: column;
   }
 }

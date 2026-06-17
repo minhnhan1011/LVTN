@@ -60,6 +60,10 @@ function ProductPage() {
     }
   }, [brandFromUrl]);
 
+  const calcDiscountPrice = (price, discount) => {
+    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  };
+
   const handleFilterChange = (e) => {
     setFilters({
       ...filters,
@@ -79,6 +83,7 @@ function ProductPage() {
 
   const filteredProducts = products.filter((item) => {
     const productName = item.TenSanPham || "";
+    const finalPrice = calcDiscountPrice(item.DonGia || 0, item.KhuyenMai || 0);
 
     const matchSearch =
       searchKeyword === "" ||
@@ -101,12 +106,11 @@ function ProductPage() {
     let matchPrice = true;
 
     if (filters.price === "under500") {
-      matchPrice = Number(item.DonGia) < 500000;
+      matchPrice = finalPrice < 500000;
     } else if (filters.price === "500to1000") {
-      matchPrice =
-        Number(item.DonGia) >= 500000 && Number(item.DonGia) <= 1000000;
+      matchPrice = finalPrice >= 500000 && finalPrice <= 1000000;
     } else if (filters.price === "above1000") {
-      matchPrice = Number(item.DonGia) > 1000000;
+      matchPrice = finalPrice > 1000000;
     }
 
     return (
@@ -230,36 +234,59 @@ function ProductPage() {
           </div>
 
           {filteredProducts.length === 0 ? (
-            <div className="no-product">
-              Không tìm thấy sản phẩm phù hợp
-            </div>
+            <div className="no-product">Không tìm thấy sản phẩm phù hợp</div>
           ) : (
             <div className="product-grid">
-              {filteredProducts.map((item) => (
-                <div className="product-card" key={item.MaSanPham}>
-                  <img
-                    src={
-                      item.DuongDan
-                        ? `http://localhost:5000${item.DuongDan}`
-                        : "/no-image.png"
-                    }
-                    alt={item.TenSanPham}
-                  />
+              {filteredProducts.map((item) => {
+                const finalPrice = calcDiscountPrice(
+                  item.DonGia || 0,
+                  item.KhuyenMai || 0
+                );
 
-                  <div className="product-info">
-                    <h3>{item.TenSanPham}</h3>
-                    <p>{item.TenThuongHieu}</p>
-                    <p>Size: {item.DanhSachSize}</p>
-                    <p>Màu: {item.DanhSachMau}</p>
+                return (
+                  <div className="product-card" key={item.MaSanPham}>
+                    <img
+                      src={
+                        item.DuongDan
+                          ? `http://localhost:5000${item.DuongDan}`
+                          : "/no-image.png"
+                      }
+                      alt={item.TenSanPham}
+                    />
 
-                    <strong>{Number(item.DonGia).toLocaleString()}đ</strong>
+                    <div className="product-info">
+                      <h3>{item.TenSanPham}</h3>
+                      <p>{item.TenThuongHieu}</p>
+                      <p>Size: {item.DanhSachSize}</p>
+                      <p>Màu: {item.DanhSachMau}</p>
 
-                    <Link to={`/detailproduct/${item.MaSanPham}`}>
-                      <button>Xem chi tiết</button>
-                    </Link>
+                      {Number(item.KhuyenMai) > 0 ? (
+                        <div className="price-box">
+                          <span className="old-price">
+                            {Number(item.DonGia).toLocaleString()}đ
+                          </span>
+
+                          <strong className="sale-price">
+                            {finalPrice.toLocaleString()}đ
+                          </strong>
+
+                          <span className="discount-badge">
+                            -{item.KhuyenMai}%
+                          </span>
+                        </div>
+                      ) : (
+                        <strong className="sale-price">
+                          {Number(item.DonGia).toLocaleString()}đ
+                        </strong>
+                      )}
+
+                      <Link to={`/detailproduct/${item.MaSanPham}`}>
+                        <button>Xem chi tiết</button>
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

@@ -610,32 +610,9 @@ app.delete("/admin/products/:id", (req, res) => {
 
 app.put("/admin/products/:id", (req, res) => {
   const { id } = req.params;
-  const {
-    TenSanPham,
-    MaLoaiSanPham,
-    MaThuongHieu,
-    DonGia,
-    MoTa,
-    KhuyenMai,
-  } = req.body;
 
-  if (!TenSanPham || !MaLoaiSanPham || !MaThuongHieu || !DonGia) {
-    return res.status(400).json({
-      message: "Vui lòng nhập đầy đủ thông tin sản phẩm",
-    });
-  }
-
-  if (Number(DonGia) <= 0) {
-    return res.status(400).json({
-      message: "Đơn giá phải lớn hơn 0",
-    });
-  }
-
-  if (![0, 10, 20, 50].includes(Number(KhuyenMai))) {
-    return res.status(400).json({
-      message: "Khuyến mãi chỉ được chọn 0%, 10%, 20% hoặc 50%",
-    });
-  }
+  const { TenSanPham, MaLoaiSanPham, MaThuongHieu, DonGia, MoTa, KhuyenMai } =
+    req.body;
 
   const sql = `
     UPDATE sanpham
@@ -667,32 +644,84 @@ app.put("/admin/products/:id", (req, res) => {
       }
 
       return res.json({ status: "Success" });
-    }
+    },
   );
 });
 
+// api bien the san pham cua admin
+app.get("/admin/products/:id/variants", (req, res) => {
+  const { id } = req.params;
+
+  const sql = `
+    SELECT 
+      bt.MaBienThe,
+      bt.MaSanPham,
+      bt.MaMauSac,
+      bt.MaSize,
+      bt.SoLuong
+    FROM sanpham_bienthe bt
+    WHERE bt.MaSanPham = ?
+  `;
+
+  db.query(sql, [id], (err, data) => {
+    if (err) {
+      console.log("Lỗi lấy biến thể:", err);
+      return res.status(500).json(err);
+    }
+
+    return res.json(data);
+  });
+});
+
+app.put("/admin/products/:id/variants", (req, res) => {
+  const { variants } = req.body;
+
+  if (!variants || !Array.isArray(variants)) {
+    return res.status(400).json({
+      message: "Dữ liệu biến thể không hợp lệ",
+    });
+  }
+
+  const sql = `
+    UPDATE sanpham_bienthe
+    SET MaMauSac = ?, MaSize = ?, SoLuong = ?
+    WHERE MaBienThe = ?
+  `;
+
+  variants.forEach((item) => {
+    db.query(sql, [
+      item.MaMauSac,
+      item.MaSize,
+      Number(item.SoLuong),
+      item.MaBienThe,
+    ]);
+  });
+
+  return res.json({ status: "Success" });
+});
 
 // API xem chi tiết sản phẩm
 app.get("/product/:id", (req, res) => {
   const sqlProduct = `
-    SELECT
-      sp.MaSanPham,
-      sp.TenSanPham,
-      sp.DonGia,
-      sp.MoTa,
-      lsp.TenLoaiSanPham,
-      th.TenThuongHieu,
-      ha.DuongDan
-    FROM sanpham sp
-    LEFT JOIN loaisanpham lsp
-      ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
-    LEFT JOIN thuonghieu th
-      ON sp.MaThuongHieu = th.MaThuongHieu
-    LEFT JOIN hinhanh ha
-      ON sp.MaSanPham = ha.MaSanPham
-    WHERE sp.MaSanPham = ?
-    LIMIT 1
-  `;
+  SELECT
+    sp.MaSanPham,
+    sp.TenSanPham,
+    sp.DonGia,
+    sp.KhuyenMai,
+    sp.MoTa,
+    lsp.TenLoaiSanPham,
+    th.TenThuongHieu,
+    ha.DuongDan
+  FROM sanpham sp
+  LEFT JOIN loaisanpham lsp
+    ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+  LEFT JOIN thuonghieu th
+    ON sp.MaThuongHieu = th.MaThuongHieu
+  LEFT JOIN hinhanh ha
+    ON sp.MaSanPham = ha.MaSanPham
+  WHERE sp.MaSanPham = ?
+  LIMIT 1
+`;
 
   db.query(sqlProduct, [req.params.id], (err, productData) => {
     if (err) return res.status(500).json(err);
@@ -729,19 +758,20 @@ app.get("/product/:id", (req, res) => {
 // api xem danh sách sản phẩm ở trang chủ
 app.get("/home/new-products", (req, res) => {
   const sql = `
-    SELECT 
-      sp.MaSanPham,
-      sp.TenSanPham,
-      sp.DonGia,
-      th.TenThuongHieu,
-      ha.DuongDan
-    FROM sanpham sp
-    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
-    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
-    GROUP BY sp.MaSanPham
-    ORDER BY sp.MaSanPham DESC
-    LIMIT 4
-  `;
+  SELECT 
+    sp.MaSanPham,
+    sp.TenSanPham,
+    sp.DonGia,
+    sp.KhuyenMai,
+    th.TenThuongHieu,
+    ha.DuongDan
+  FROM sanpham sp
+  LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
+  LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+  GROUP BY sp.MaSanPham
+  ORDER BY sp.MaSanPham DESC
+  LIMIT 4
+`;
 
   db.query(sql, (err, data) => {
     if (err) return res.status(500).json(err);
@@ -755,6 +785,7 @@ app.get("/home/nike-products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.DonGia,
+      sp.KhuyenMai,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
@@ -778,6 +809,7 @@ app.get("/home/adidas-products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.DonGia,
+      sp.KhuyenMai,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
@@ -835,11 +867,14 @@ app.post("/cart", (req, res) => {
           });
         } else {
           const sqlPrice = `
-            SELECT sp.DonGia
-            FROM sanpham_bienthe bt
-            JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
-            WHERE bt.MaBienThe = ?
-          `;
+  SELECT 
+    sp.DonGia,
+    sp.KhuyenMai,
+    (sp.DonGia - (sp.DonGia * IFNULL(sp.KhuyenMai, 0) / 100)) AS GiaSauGiam
+  FROM sanpham_bienthe bt
+  JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
+  WHERE bt.MaBienThe = ?
+`;
 
           db.query(sqlPrice, [MaBienThe], (err4, priceData) => {
             if (err4) return res.status(500).json(err4);
@@ -862,7 +897,7 @@ app.post("/cart", (req, res) => {
                 maGioHang,
                 MaBienThe,
                 SoLuong,
-                priceData[0].DonGia,
+                priceData[0].GiaSauGiam,
               ],
               (err5) => {
                 if (err5) return res.status(500).json(err5);
@@ -894,24 +929,26 @@ app.post("/cart", (req, res) => {
 
 app.get("/cart/:MaNguoiDung", (req, res) => {
   const sql = `
-    SELECT
-      ghct.MaGioHangChiTiet,
-      ghct.SoLuong,
-      ghct.DonGia,
-      sp.TenSanPham,
-      sp.MaSanPham,
-      ms.TenMauSac,
-      sz.TenSize,
-      ha.DuongDan
-    FROM giohang gh
-    JOIN giohangchitiet ghct ON gh.MaGioHang = ghct.MaGioHang
-    JOIN sanpham_bienthe bt ON ghct.MaBienThe = bt.MaBienThe
-    JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
-    JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
-    JOIN size sz ON bt.MaSize = sz.MaSize
-    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
-    WHERE gh.MaNguoiDung = ?
-  `;
+  SELECT
+    ghct.MaGioHangChiTiet,
+    ghct.SoLuong,
+    ghct.DonGia,
+    sp.DonGia AS DonGiaGoc,
+    sp.KhuyenMai,
+    sp.TenSanPham,
+    sp.MaSanPham,
+    ms.TenMauSac,
+    sz.TenSize,
+    ha.DuongDan
+  FROM giohang gh
+  JOIN giohangchitiet ghct ON gh.MaGioHang = ghct.MaGioHang
+  JOIN sanpham_bienthe bt ON ghct.MaBienThe = bt.MaBienThe
+  JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
+  JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
+  JOIN size sz ON bt.MaSize = sz.MaSize
+  LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+  WHERE gh.MaNguoiDung = ?
+`;
 
   db.query(sql, [req.params.MaNguoiDung], (err, data) => {
     if (err) return res.status(500).json(err);

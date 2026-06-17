@@ -128,3 +128,32 @@
   margin-bottom: 18px;
   color: #111827;
 }
+
+.price-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+
+.old-price {
+  color: #9ca3af;
+  text-decoration: line-through;
+  font-size: 14px;
+}
+
+.sale-price {
+  color: #dc2626;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.discount-badge {
+  background: #dc2626;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 999px;
+}
