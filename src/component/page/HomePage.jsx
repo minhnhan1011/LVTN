@@ -4,6 +4,7 @@ import bannerShoe1 from "../asset/banner/banner-den.jpg";
 import "../asset/HomePage.css";
 import HomeProduct from "./HomeProduct";
 import Footer from "../footer/Footer";
+import { Link } from "react-router-dom";
 
 function HomePage() {
   return (
@@ -30,9 +31,9 @@ function HomePage() {
           </p>
 
           <div className="hero-buttons">
-            <button className="hero-btn-primary">Mua ngay</button>
-
-            <button className="hero-btn-secondary">Xem sản phẩm</button>
+            <Link to="/productpage">
+              <button className="hero-btn-secondary">Xem sản phẩm</button>
+            </Link>
           </div>
         </div>
       </section>

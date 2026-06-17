@@ -95,7 +95,7 @@ function AdminPage() {
           <Link to="/admin">Quản lý User</Link>
           <Link to="/admin/products">Quản lý sản phẩm</Link>
           <Link to="/" onClick={handleLogout}>
-            Dang xuat
+            Đăng xuất
           </Link>
         </nav>
       </aside>

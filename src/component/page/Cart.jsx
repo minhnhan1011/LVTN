@@ -65,6 +65,24 @@ function Cart() {
     }
   };
 
+  const handleDeleteCartItem = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) {
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:5000/cart/detail/${id}`);
+
+      setSelectedItems(selectedItems.filter((item) => item !== id));
+      fetchCart();
+
+      alert("Đã xóa khỏi giỏ hàng");
+    } catch (err) {
+      console.log(err);
+      alert("Xóa sản phẩm thất bại");
+    }
+  };
+
   const selectedCart = cart.filter((item) =>
     selectedItems.includes(item.MaGioHangChiTiet)
   );
@@ -148,6 +166,16 @@ function Cart() {
                         +
                       </button>
                     </div>
+
+                    <button
+                      type="button"
+                      className="cart-delete-btn"
+                      onClick={() =>
+                        handleDeleteCartItem(item.MaGioHangChiTiet)
+                      }
+                    >
+                      Xóa
+                    </button>
                   </div>
 
                   <strong>

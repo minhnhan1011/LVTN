@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
 import Header from "../header/Header";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import "../asset/ProductPage.css";
 
 function ProductPage() {
+  const [searchParams] = useSearchParams();
+
+  const searchKeyword = searchParams.get("search") || "";
+  const brandFromUrl = searchParams.get("brand") || "";
+
   const [products, setProducts] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
   const [brands, setBrands] = useState([]);
@@ -20,21 +25,40 @@ function ProductPage() {
   });
 
   useEffect(() => {
-    axios.get("http://localhost:5000/admin/products")
-      .then((res) => setProducts(res.data));
+    axios
+      .get("http://localhost:5000/admin/products")
+      .then((res) => setProducts(res.data))
+      .catch((err) => console.log(err));
 
-    axios.get("http://localhost:5000/admin/product-types")
-      .then((res) => setProductTypes(res.data));
+    axios
+      .get("http://localhost:5000/admin/product-types")
+      .then((res) => setProductTypes(res.data))
+      .catch((err) => console.log(err));
 
-    axios.get("http://localhost:5000/admin/brands")
-      .then((res) => setBrands(res.data));
+    axios
+      .get("http://localhost:5000/admin/brands")
+      .then((res) => setBrands(res.data))
+      .catch((err) => console.log(err));
 
-    axios.get("http://localhost:5000/admin/colors")
-      .then((res) => setColors(res.data));
+    axios
+      .get("http://localhost:5000/admin/colors")
+      .then((res) => setColors(res.data))
+      .catch((err) => console.log(err));
 
-    axios.get("http://localhost:5000/admin/sizes")
-      .then((res) => setSizes(res.data));
+    axios
+      .get("http://localhost:5000/admin/sizes")
+      .then((res) => setSizes(res.data))
+      .catch((err) => console.log(err));
   }, []);
+
+  useEffect(() => {
+    if (brandFromUrl) {
+      setFilters((prev) => ({
+        ...prev,
+        brand: brandFromUrl,
+      }));
+    }
+  }, [brandFromUrl]);
 
   const handleFilterChange = (e) => {
     setFilters({
@@ -43,7 +67,23 @@ function ProductPage() {
     });
   };
 
+  const clearFilters = () => {
+    setFilters({
+      price: "",
+      type: "",
+      brand: "",
+      size: "",
+      color: "",
+    });
+  };
+
   const filteredProducts = products.filter((item) => {
+    const productName = item.TenSanPham || "";
+
+    const matchSearch =
+      searchKeyword === "" ||
+      productName.toLowerCase().includes(searchKeyword.toLowerCase());
+
     const matchType =
       filters.type === "" || item.TenLoaiSanPham === filters.type;
 
@@ -51,10 +91,12 @@ function ProductPage() {
       filters.brand === "" || item.TenThuongHieu === filters.brand;
 
     const matchSize =
-      filters.size === "" || item.TenSize === filters.size;
+      filters.size === "" ||
+      (item.DanhSachSize && item.DanhSachSize.includes(filters.size));
 
     const matchColor =
-      filters.color === "" || item.TenMauSac === filters.color;
+      filters.color === "" ||
+      (item.DanhSachMau && item.DanhSachMau.includes(filters.color));
 
     let matchPrice = true;
 
@@ -67,7 +109,14 @@ function ProductPage() {
       matchPrice = Number(item.DonGia) > 1000000;
     }
 
-    return matchType && matchBrand && matchSize && matchColor && matchPrice;
+    return (
+      matchSearch &&
+      matchType &&
+      matchBrand &&
+      matchSize &&
+      matchColor &&
+      matchPrice
+    );
   });
 
   return (
@@ -78,9 +127,19 @@ function ProductPage() {
         <aside className="product-filter">
           <h2>Bộ lọc</h2>
 
+          {searchKeyword && (
+            <div className="search-result-box">
+              Từ khóa: <strong>{searchKeyword}</strong>
+            </div>
+          )}
+
           <div className="filter-group">
             <label>Giá tiền</label>
-            <select name="price" value={filters.price} onChange={handleFilterChange}>
+            <select
+              name="price"
+              value={filters.price}
+              onChange={handleFilterChange}
+            >
               <option value="">Tất cả giá</option>
               <option value="under500">Dưới 500.000đ</option>
               <option value="500to1000">500.000đ - 1.000.000đ</option>
@@ -90,7 +149,11 @@ function ProductPage() {
 
           <div className="filter-group">
             <label>Loại sản phẩm</label>
-            <select name="type" value={filters.type} onChange={handleFilterChange}>
+            <select
+              name="type"
+              value={filters.type}
+              onChange={handleFilterChange}
+            >
               <option value="">Tất cả loại</option>
               {productTypes.map((item) => (
                 <option key={item.MaLoaiSanPham} value={item.TenLoaiSanPham}>
@@ -102,7 +165,11 @@ function ProductPage() {
 
           <div className="filter-group">
             <label>Thương hiệu</label>
-            <select name="brand" value={filters.brand} onChange={handleFilterChange}>
+            <select
+              name="brand"
+              value={filters.brand}
+              onChange={handleFilterChange}
+            >
               <option value="">Tất cả thương hiệu</option>
               {brands.map((item) => (
                 <option key={item.MaThuongHieu} value={item.TenThuongHieu}>
@@ -114,7 +181,11 @@ function ProductPage() {
 
           <div className="filter-group">
             <label>Size</label>
-            <select name="size" value={filters.size} onChange={handleFilterChange}>
+            <select
+              name="size"
+              value={filters.size}
+              onChange={handleFilterChange}
+            >
               <option value="">Tất cả size</option>
               {sizes.map((item) => (
                 <option key={item.MaSize} value={item.TenSize}>
@@ -126,7 +197,11 @@ function ProductPage() {
 
           <div className="filter-group">
             <label>Màu sắc</label>
-            <select name="color" value={filters.color} onChange={handleFilterChange}>
+            <select
+              name="color"
+              value={filters.color}
+              onChange={handleFilterChange}
+            >
               <option value="">Tất cả màu</option>
               {colors.map((item) => (
                 <option key={item.MaMauSac} value={item.TenMauSac}>
@@ -136,51 +211,57 @@ function ProductPage() {
             </select>
           </div>
 
-          <button
-            className="clear-filter-btn"
-            onClick={() =>
-              setFilters({
-                price: "",
-                type: "",
-                brand: "",
-                size: "",
-                color: "",
-              })
-            }
-          >
+          <button className="clear-filter-btn" onClick={clearFilters}>
             Xóa lọc
           </button>
         </aside>
 
         <section className="product-list-section">
           <div className="product-page-title">
-            <h1>Tất cả sản phẩm</h1>
+            <h1>
+              {searchKeyword
+                ? `Kết quả tìm kiếm: ${searchKeyword}`
+                : filters.brand
+                ? `Sản phẩm ${filters.brand}`
+                : "Tất cả sản phẩm"}
+            </h1>
+
             <p>{filteredProducts.length} sản phẩm</p>
           </div>
 
-          <div className="product-grid">
-            {filteredProducts.map((item) => (
-              <div className="product-card" key={item.MaSanPham}>
-                <img
-                  src={`http://localhost:5000${item.DuongDan}`}
-                  alt={item.TenSanPham}
-                />
+          {filteredProducts.length === 0 ? (
+            <div className="no-product">
+              Không tìm thấy sản phẩm phù hợp
+            </div>
+          ) : (
+            <div className="product-grid">
+              {filteredProducts.map((item) => (
+                <div className="product-card" key={item.MaSanPham}>
+                  <img
+                    src={
+                      item.DuongDan
+                        ? `http://localhost:5000${item.DuongDan}`
+                        : "/no-image.png"
+                    }
+                    alt={item.TenSanPham}
+                  />
 
-                <div className="product-info">
-                  <h3>{item.TenSanPham}</h3>
-                  <p>{item.TenThuongHieu}</p>
-                  <p>Size: {item.TenSize}</p>
-                  <p>Màu: {item.TenMauSac}</p>
+                  <div className="product-info">
+                    <h3>{item.TenSanPham}</h3>
+                    <p>{item.TenThuongHieu}</p>
+                    <p>Size: {item.DanhSachSize}</p>
+                    <p>Màu: {item.DanhSachMau}</p>
 
-                  <strong>{Number(item.DonGia).toLocaleString()}đ</strong>
-                  
-                  <Link to={`/detailproduct/${item.MaSanPham}`}>
-                    <button>Xem chi tiết</button>
-                  </Link>
+                    <strong>{Number(item.DonGia).toLocaleString()}đ</strong>
+
+                    <Link to={`/detailproduct/${item.MaSanPham}`}>
+                      <button>Xem chi tiết</button>
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </>

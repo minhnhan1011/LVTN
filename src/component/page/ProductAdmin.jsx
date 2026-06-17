@@ -5,6 +5,7 @@ import "../asset/ProductsAdmin.css";
 
 function ProductAdmin() {
   const [showForm, setShowForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
 
   const [products, setProducts] = useState([]);
   const [productTypes, setProductTypes] = useState([]);
@@ -22,12 +23,25 @@ function ProductAdmin() {
   });
 
   const [variants, setVariants] = useState([
-    {
-      MaMauSac: "",
-      MaSize: "",
-      SoLuong: "",
-    },
+    { MaMauSac: "", MaSize: "", SoLuong: "" },
   ]);
+
+  const [editValues, setEditValues] = useState({
+    MaSanPham: "",
+    TenSanPham: "",
+    MaLoaiSanPham: "",
+    MaThuongHieu: "",
+    DonGia: "",
+    MoTa: "",
+    KhuyenMai: 0,
+  });
+
+  const handleLogout = () => {
+    axios
+      .get("http://localhost:5000/logout")
+      .then(() => window.location.reload(true))
+      .catch((err) => console.log(err));
+  };
 
   const fetchProducts = async () => {
     try {
@@ -59,17 +73,11 @@ function ProductAdmin() {
   }, []);
 
   const handleChange = (e) => {
-    setValues({
-      ...values,
-      [e.target.name]: e.target.value,
-    });
+    setValues({ ...values, [e.target.name]: e.target.value });
   };
 
   const handleFile = (e) => {
-    setValues({
-      ...values,
-      HinhAnh: e.target.files[0],
-    });
+    setValues({ ...values, HinhAnh: e.target.files[0] });
   };
 
   const handleVariantChange = (index, e) => {
@@ -84,14 +92,7 @@ function ProductAdmin() {
   };
 
   const addVariant = () => {
-    setVariants([
-      ...variants,
-      {
-        MaMauSac: "",
-        MaSize: "",
-        SoLuong: "",
-      },
-    ]);
+    setVariants([...variants, { MaMauSac: "", MaSize: "", SoLuong: "" }]);
   };
 
   const removeVariant = (index) => {
@@ -100,21 +101,7 @@ function ProductAdmin() {
       return;
     }
 
-    const newVariants = variants.filter((_, i) => i !== index);
-    setVariants(newVariants);
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
-
-    try {
-      await axios.delete(`http://localhost:5000/admin/products/${id}`);
-      alert("Xóa thành công");
-      fetchProducts();
-    } catch (err) {
-      console.log(err);
-      alert("Xóa thất bại");
-    }
+    setVariants(variants.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
@@ -152,9 +139,7 @@ function ProductAdmin() {
 
     try {
       await axios.post("http://localhost:5000/admin/products", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       alert("Thêm sản phẩm thành công");
@@ -168,14 +153,7 @@ function ProductAdmin() {
         HinhAnh: null,
       });
 
-      setVariants([
-        {
-          MaMauSac: "",
-          MaSize: "",
-          SoLuong: "",
-        },
-      ]);
-
+      setVariants([{ MaMauSac: "", MaSize: "", SoLuong: "" }]);
       setShowForm(false);
       fetchProducts();
     } catch (err) {
@@ -184,15 +162,84 @@ function ProductAdmin() {
     }
   };
 
+  const handleEditClick = (item) => {
+    setShowEditForm(true);
+    setShowForm(false);
+
+    setEditValues({
+      MaSanPham: item.MaSanPham,
+      TenSanPham: item.TenSanPham,
+      MaLoaiSanPham: item.MaLoaiSanPham || "",
+      MaThuongHieu: item.MaThuongHieu || "",
+      DonGia: item.DonGia,
+      MoTa: item.MoTa || "",
+      KhuyenMai: item.KhuyenMai || 0,
+    });
+  };
+
+  const handleEditChange = (e) => {
+    setEditValues({
+      ...editValues,
+      [e.target.name]: e.target.value,
+    });
+  };
+
+  const handleUpdateProduct = async (e) => {
+    e.preventDefault();
+
+    if (Number(editValues.DonGia) <= 0) {
+      alert("Đơn giá phải lớn hơn 0");
+      return;
+    }
+
+    if (![0, 10, 20, 50].includes(Number(editValues.KhuyenMai))) {
+      alert("Khuyến mãi chỉ được chọn 0%, 10%, 20% hoặc 50%");
+      return;
+    }
+
+    try {
+      await axios.put(
+        `http://localhost:5000/admin/products/${editValues.MaSanPham}`,
+        editValues
+      );
+
+      alert("Cập nhật sản phẩm thành công");
+      setShowEditForm(false);
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+      alert(err.response?.data?.message || "Cập nhật thất bại");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
+
+    try {
+      await axios.delete(`http://localhost:5000/admin/products/${id}`);
+      alert("Xóa thành công");
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+      alert(err.response?.data?.message || "Xóa thất bại");
+    }
+  };
+
+  const calcDiscountPrice = (price, discount) => {
+    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  };
+
   return (
     <div className="admin-page">
       <aside className="admin-sidebar">
         <h2>Admin</h2>
 
         <nav className="admin-nav">
-          <Link to="/admin">Tổng quan</Link>
+          <Link to="/admin">Quản lý User</Link>
           <Link to="/admin/products">Quản lý sản phẩm</Link>
-          <Link to="/">Về trang chủ</Link>
+          <Link to="/" onClick={handleLogout}>
+            Đăng xuất
+          </Link>
         </nav>
       </aside>
 
@@ -202,7 +249,10 @@ function ProductAdmin() {
 
           <button
             className="admin-add-btn"
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              setShowForm(!showForm);
+              setShowEditForm(false);
+            }}
           >
             {showForm ? "Đóng" : "+ Thêm sản phẩm"}
           </button>
@@ -253,7 +303,7 @@ function ProductAdmin() {
               type="number"
               name="DonGia"
               min="1"
-              placeholder="Đơn giá"
+              placeholder="Đơn giá gốc"
               value={values.DonGia}
               onChange={handleChange}
               required
@@ -342,6 +392,100 @@ function ProductAdmin() {
           </form>
         )}
 
+        {showEditForm && (
+          <form className="admin-product-form" onSubmit={handleUpdateProduct}>
+            <h2>Sửa sản phẩm</h2>
+
+            <input
+              type="text"
+              name="TenSanPham"
+              placeholder="Tên sản phẩm"
+              value={editValues.TenSanPham}
+              onChange={handleEditChange}
+              required
+            />
+
+            <select
+              name="MaLoaiSanPham"
+              value={editValues.MaLoaiSanPham}
+              onChange={handleEditChange}
+              required
+            >
+              <option value="">Chọn loại sản phẩm</option>
+              {productTypes.map((item) => (
+                <option key={item.MaLoaiSanPham} value={item.MaLoaiSanPham}>
+                  {item.TenLoaiSanPham}
+                </option>
+              ))}
+            </select>
+
+            <select
+              name="MaThuongHieu"
+              value={editValues.MaThuongHieu}
+              onChange={handleEditChange}
+              required
+            >
+              <option value="">Chọn thương hiệu</option>
+              {brands.map((item) => (
+                <option key={item.MaThuongHieu} value={item.MaThuongHieu}>
+                  {item.TenThuongHieu}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              name="DonGia"
+              min="1"
+              placeholder="Giá gốc"
+              value={editValues.DonGia}
+              onChange={handleEditChange}
+              required
+            />
+
+            <select
+              name="KhuyenMai"
+              value={editValues.KhuyenMai}
+              onChange={handleEditChange}
+            >
+              <option value="0">Không khuyến mãi</option>
+              <option value="10">Giảm 10%</option>
+              <option value="20">Giảm 20%</option>
+              <option value="50">Giảm 50%</option>
+            </select>
+
+            <textarea
+              name="MoTa"
+              placeholder="Mô tả"
+              value={editValues.MoTa}
+              onChange={handleEditChange}
+            />
+
+            <div className="discount-preview">
+              Giá sau khuyến mãi:{" "}
+              <strong>
+                {calcDiscountPrice(
+                  editValues.DonGia || 0,
+                  editValues.KhuyenMai || 0
+                ).toLocaleString()}
+                đ
+              </strong>
+            </div>
+
+            <button type="submit" className="admin-submit-btn">
+              Lưu cập nhật
+            </button>
+
+            <button
+              type="button"
+              className="admin-cancel-btn"
+              onClick={() => setShowEditForm(false)}
+            >
+              Hủy
+            </button>
+          </form>
+        )}
+
         <table className="admin-product-table">
           <thead>
             <tr>
@@ -352,7 +496,9 @@ function ProductAdmin() {
               <th>Thương hiệu</th>
               <th>Màu</th>
               <th>Size</th>
-              <th>Giá</th>
+              <th>Giá gốc</th>
+              <th>KM</th>
+              <th>Giá sau giảm</th>
               <th>Mô tả</th>
               <th>Tổng SL</th>
               <th>Thao tác</th>
@@ -379,11 +525,19 @@ function ProductAdmin() {
                 <td>{item.DanhSachMau}</td>
                 <td>{item.DanhSachSize}</td>
                 <td>{Number(item.DonGia).toLocaleString()}đ</td>
+                <td>{item.KhuyenMai || 0}%</td>
+                <td>
+                  {calcDiscountPrice(
+                    item.DonGia || 0,
+                    item.KhuyenMai || 0
+                  ).toLocaleString()}
+                  đ
+                </td>
                 <td>{item.MoTa}</td>
                 <td>{item.TongSoLuong}</td>
 
                 <td>
-                  <button>Sửa</button>
+                  <button onClick={() => handleEditClick(item)}>Sửa</button>
 
                   <button onClick={() => handleDelete(item.MaSanPham)}>
                     Xóa

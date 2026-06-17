@@ -119,3 +119,12 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.search-result-box,
+.no-product {
+  background: white;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+  color: #111827;
+}

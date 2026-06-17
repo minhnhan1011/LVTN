@@ -6,72 +6,106 @@
 
 .header {
   width: 100%;
-  height: 70px;
-  background-color: black;
+  height: 76px;
+  background: #050505;
   color: white;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 40px;
-  padding-left: 140px;
+  gap: 28px;
+  padding: 0 6%;
 }
 
 .logo {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 25px;
+  font-weight: 800;
+  color: white;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .nav {
   display: flex;
-  gap: 30px;
+  gap: 26px;
 }
 
 .nav a {
   color: white;
   text-decoration: none;
-  font-size: 16px;
-  transition: 0.3s;
+  font-size: 15px;
+  font-weight: 500;
 }
 
 .nav a:hover {
-  color: gray;
+  color: #ff6b00;
+}
+
+.search-box {
+  flex: 1;
+  max-width: 430px;
+  display: flex;
+  background: white;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-left: auto;
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 11px 16px;
+  font-size: 14px;
+}
+
+.search-box button {
+  border: none;
+  background: #ff6b00;
+  color: white;
+  padding: 0 20px;
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .auth {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
 }
 
-.login-btn {
-  padding: 8px 16px;
-  background: transparent;
-  border: 1px solid white;
-  color: white;
-  cursor: pointer;
-  border-radius: 5px;
-  text-decoration: none;
-}
-
-.register-btn {
-  padding: 8px 16px;
-  background: white;
-  border: none;
-  color: black;
-  cursor: pointer;
-  border-radius: 5px;
-  font-weight: bold;
-  text-decoration: none;
-}
-
-.login-btn{
-  text-decoration: none;
-}
-
-.cart-btn {
+.cart-btn,
+.login-btn,
+.logout-btn {
   text-decoration: none;
   background: #111827;
   color: white;
   padding: 9px 14px;
   border-radius: 8px;
   font-weight: 600;
+  border: none;
+  cursor: pointer;
+}
+
+.cart-btn:hover,
+.login-btn:hover,
+.logout-btn:hover {
+  background: #ff6b00;
+}
+
+.hello-text {
+  font-size: 14px;
+}
+
+@media (max-width: 1000px) {
+  .header {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 18px 5%;
+  }
+
+  .search-box {
+    order: 3;
+    max-width: 100%;
+    width: 100%;
+  }
 }
