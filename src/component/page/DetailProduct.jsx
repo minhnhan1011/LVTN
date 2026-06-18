@@ -20,28 +20,28 @@ function DetailProduct() {
   useEffect(() => {
     axios
       .get(`http://localhost:5000/product/${id}`)
-      .then((res) => {
-        setProduct(res.data);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
+      .then((res) => setProduct(res.data))
+      .catch((err) => console.log(err));
 
     axios
       .get("http://localhost:5000/auth", { withCredentials: true })
       .then((res) => {
         if (res.data.Status === "Success") {
           setUser(res.data);
+        } else {
+          setUser(null);
         }
       })
-      .catch((err) => {
-        console.log(err);
-      });
+      .catch((err) => console.log(err));
   }, [id]);
 
   if (!product) {
     return <h2>Đang tải...</h2>;
   }
+
+  const calcDiscountPrice = (price, discount) => {
+    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  };
 
   const uniqueColors = [...new Set(product.variants?.map((v) => v.TenMauSac))];
 
@@ -51,12 +51,9 @@ function DetailProduct() {
     (item) => item.TenMauSac === selectedColor && item.TenSize === selectedSize
   );
 
-  const handleAddCart = async () => {
-    if (!user) {
-      alert("Vui lòng đăng nhập để thêm vào giỏ hàng");
-      return;
-    }
+  const finalPrice = calcDiscountPrice(product.DonGia, product.KhuyenMai);
 
+  const handleAddCart = async () => {
     if (!selectedColor) {
       alert("Vui lòng chọn màu sắc");
       return;
@@ -68,7 +65,7 @@ function DetailProduct() {
     }
 
     if (!selectedVariant) {
-      alert("sản phẩm không tồn tại");
+      alert("Sản phẩm không tồn tại");
       return;
     }
 
@@ -79,6 +76,48 @@ function DetailProduct() {
 
     if (quantity > selectedVariant.SoLuong) {
       alert(`Chỉ còn ${selectedVariant.SoLuong} sản phẩm trong kho`);
+      return;
+    }
+
+    if (!user) {
+      const guestCartItem = {
+        MaGioHangChiTiet: `guest-${selectedVariant.MaBienThe}`,
+        MaBienThe: selectedVariant.MaBienThe,
+        MaSanPham: product.MaSanPham,
+        TenSanPham: product.TenSanPham,
+        TenMauSac: selectedColor,
+        TenSize: selectedSize,
+        SoLuong: quantity,
+        DonGia: finalPrice,
+        DonGiaGoc: product.DonGia,
+        KhuyenMai: product.KhuyenMai || 0,
+        DuongDan: product.DuongDan,
+      };
+
+      const oldCart = JSON.parse(localStorage.getItem("guestCart")) || [];
+
+      const existedItem = oldCart.find(
+        (item) => item.MaBienThe === selectedVariant.MaBienThe
+      );
+
+      let newCart;
+
+      if (existedItem) {
+        newCart = oldCart.map((item) =>
+          item.MaBienThe === selectedVariant.MaBienThe
+            ? {
+                ...item,
+                SoLuong: Number(item.SoLuong) + Number(quantity),
+              }
+            : item
+        );
+      } else {
+        newCart = [...oldCart, guestCartItem];
+      }
+
+      localStorage.setItem("guestCart", JSON.stringify(newCart));
+
+      alert("Đã thêm vào giỏ hàng");
       return;
     }
 
@@ -116,9 +155,23 @@ function DetailProduct() {
           <div className="detail-info">
             <h1>{product.TenSanPham}</h1>
 
-            <p className="detail-price">
-              {Number(product.DonGia).toLocaleString()}đ
-            </p>
+            {Number(product.KhuyenMai) > 0 ? (
+              <div className="detail-price-box">
+                <span className="detail-old-price">
+                  {Number(product.DonGia).toLocaleString()}đ
+                </span>
+
+                <p className="detail-price">{finalPrice.toLocaleString()}đ</p>
+
+                <span className="detail-discount-badge">
+                  -{product.KhuyenMai}%
+                </span>
+              </div>
+            ) : (
+              <p className="detail-price">
+                {Number(product.DonGia).toLocaleString()}đ
+              </p>
+            )}
 
             <p className="detail-brand">{product.TenThuongHieu}</p>
 
@@ -163,6 +216,33 @@ function DetailProduct() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="detail-option">
+              <h3>Số lượng</h3>
+
+              <div className="quantity-box">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (quantity > 1) setQuantity(quantity - 1);
+                  }}
+                >
+                  -
+                </button>
+
+                <span>{quantity}</span>
+
+                <button type="button" onClick={() => setQuantity(quantity + 1)}>
+                  +
+                </button>
+              </div>
+
+              {selectedVariant && (
+                <p className="stock-text">
+                  Còn lại: {selectedVariant.SoLuong} sản phẩm
+                </p>
+              )}
             </div>
 
             <div className="detail-description">

@@ -10,11 +10,19 @@ function Cart() {
   const MaNguoiDung = localStorage.getItem("MaNguoiDung");
 
   const fetchCart = () => {
-    if (!MaNguoiDung) return;
+    if (!MaNguoiDung) {
+      const guestCart = JSON.parse(localStorage.getItem("guestCart")) || [];
+      setCart(guestCart);
+      setSelectedItems([]);
+      return;
+    }
 
     axios
       .get(`http://localhost:5000/cart/${MaNguoiDung}`)
-      .then((res) => setCart(res.data))
+      .then((res) => {
+        setCart(res.data);
+        setSelectedItems([]);
+      })
       .catch((err) => console.log(err));
   };
 
@@ -38,6 +46,11 @@ function Cart() {
     }
   };
 
+  const updateGuestCart = (newCart) => {
+    localStorage.setItem("guestCart", JSON.stringify(newCart));
+    setCart(newCart);
+  };
+
   const handleQuantity = async (item, type) => {
     let newQuantity = Number(item.SoLuong);
 
@@ -50,6 +63,17 @@ function Cart() {
       newQuantity += 1;
     }
 
+    if (!MaNguoiDung) {
+      const newCart = cart.map((cartItem) =>
+        cartItem.MaGioHangChiTiet === item.MaGioHangChiTiet
+          ? { ...cartItem, SoLuong: newQuantity }
+          : cartItem
+      );
+
+      updateGuestCart(newCart);
+      return;
+    }
+
     try {
       await axios.put(
         `http://localhost:5000/cart/detail/${item.MaGioHangChiTiet}`,
@@ -60,13 +84,23 @@ function Cart() {
 
       fetchCart();
     } catch (err) {
-      console.log(err);
+      console.log(err.response?.data || err);
       alert("Cập nhật số lượng thất bại");
     }
   };
 
   const handleDeleteCartItem = async (id) => {
     if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) {
+      return;
+    }
+
+    if (!MaNguoiDung) {
+      const newCart = cart.filter((item) => item.MaGioHangChiTiet !== id);
+
+      updateGuestCart(newCart);
+      setSelectedItems(selectedItems.filter((item) => item !== id));
+
+      alert("Đã xóa khỏi giỏ hàng");
       return;
     }
 
@@ -78,8 +112,8 @@ function Cart() {
 
       alert("Đã xóa khỏi giỏ hàng");
     } catch (err) {
-      console.log(err);
-      alert("Xóa sản phẩm thất bại");
+      console.log(err.response?.data || err);
+      alert(err.response?.data?.message || "Xóa sản phẩm thất bại");
     }
   };
 
@@ -148,6 +182,12 @@ function Cart() {
                     <h3>{item.TenSanPham}</h3>
                     <p>Màu: {item.TenMauSac}</p>
                     <p>Size: {item.TenSize}</p>
+
+                    {Number(item.KhuyenMai) > 0 && (
+                      <p className="cart-sale-text">
+                        Giảm {item.KhuyenMai}%
+                      </p>
+                    )}
 
                     <div className="cart-qty">
                       <button

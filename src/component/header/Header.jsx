@@ -15,9 +15,13 @@ function Header() {
   const handleLogout = () => {
     axios
       .get("http://localhost:5000/logout")
-      .then(() => window.location.reload(true))
+      .then(() => {
+        localStorage.removeItem("MaNguoiDung");
+        window.location.reload(true);
+      })
       .catch((err) => console.log(err));
   };
+
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -38,6 +42,7 @@ function Header() {
           localStorage.setItem("MaNguoiDung", res.data.MaNguoiDung);
         } else {
           setAuth(false);
+          localStorage.removeItem("MaNguoiDung");
         }
       })
       .catch((err) => console.log(err));
@@ -52,7 +57,8 @@ function Header() {
       <nav className="nav">
         <Link to="/">Trang chủ</Link>
         <Link to="/productpage">Sản phẩm</Link>
-        <Link to="/orderpage">Đơn hàng</Link>
+
+        {auth && <Link to="/orderpage">Đơn hàng</Link>}
       </nav>
 
       <form className="search-box" onSubmit={handleSearch}>

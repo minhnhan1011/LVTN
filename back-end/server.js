@@ -1059,10 +1059,6 @@ app.post("/checkout", (req, res) => {
     });
   }
 
-  const MaDiaChi = crypto.randomUUID();
-  const MaDonHang = crypto.randomUUID();
-  const MaThanhToan = crypto.randomUUID();
-
   const sqlAddress = `
     INSERT INTO diachi
     (MaDiaChi, MaNguoiDung, HoTen, SoDienThoai, DiaChiChiTiet, Phuong, Quan, ThanhPho)
