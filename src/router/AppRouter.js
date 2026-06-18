@@ -8,6 +8,7 @@ import ProductPage from "../component/page/ProductPage";
 import DetailProduct from "../component/page/DetailProduct";
 import Cart from "../component/page/Cart";
 import CheckoutPage from "../component/page/CheckoutPage";
+import OrderPage from "../component/page/OrderPage";
 
 function AppRouter() {
     return (
@@ -22,6 +23,7 @@ function AppRouter() {
         <Route path="/detailproduct/:id" element={<DetailProduct />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/orderpage" element={<OrderPage />} />
       </Routes>
     </BrowserRouter>
   );

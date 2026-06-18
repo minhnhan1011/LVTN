@@ -52,7 +52,7 @@ function Header() {
       <nav className="nav">
         <Link to="/">Trang chủ</Link>
         <Link to="/productpage">Sản phẩm</Link>
-        <Link to="/">Liên hệ</Link>
+        <Link to="/orderpage">Đơn hàng</Link>
       </nav>
 
       <form className="search-box" onSubmit={handleSearch}>
