@@ -26,7 +26,7 @@ function ProductPage() {
 
   useEffect(() => {
     axios
-      .get("http://localhost:5000/admin/products")
+      .get("http://localhost:5000/products")
       .then((res) => setProducts(res.data))
       .catch((err) => console.log(err));
 

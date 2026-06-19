@@ -309,3 +309,81 @@
     flex-direction: column;
   }
 }
+
+.status-selling {
+  display: inline-block;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.status-stopped {
+  display: inline-block;
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.action-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-edit,
+.btn-variant,
+.btn-hide,
+.btn-show {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-edit {
+  background: #2563eb;
+}
+
+.btn-variant {
+  background: #4f46e5;
+}
+
+.btn-hide {
+  background: #ef4444;
+}
+
+.btn-show {
+  background: #16a34a;
+}
+
+.status-selling,
+.status-stopped {
+  display: inline-flex;
+  min-width: 95px;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.status-selling {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-stopped {
+  background: #fee2e2;
+  color: #dc2626;
+}

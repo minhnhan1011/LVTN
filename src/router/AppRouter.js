@@ -9,6 +9,7 @@ import DetailProduct from "../component/page/DetailProduct";
 import Cart from "../component/page/Cart";
 import CheckoutPage from "../component/page/CheckoutPage";
 import OrderPage from "../component/page/OrderPage";
+import AdminOrder from "../component/page/AdminOrder";
 
 function AppRouter() {
     return (
@@ -24,6 +25,7 @@ function AppRouter() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orderpage" element={<OrderPage />} />
+        <Route path="/admin/order" element={<AdminOrder />} />"
       </Routes>
     </BrowserRouter>
   );

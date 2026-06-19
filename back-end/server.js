@@ -392,6 +392,7 @@ app.get("/admin/products", (req, res) => {
       sp.KhuyenMai,
       sp.MaLoaiSanPham,
       sp.MaThuongHieu,
+      sp.TrangThai,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
       ha.DuongDan,
@@ -539,71 +540,20 @@ app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
 });
 
 app.delete("/admin/products/:id", (req, res) => {
-  const id = req.params.id;
+  const { id } = req.params;
 
-  const sqlCheckOrder = `
-    SELECT dhct.*
-    FROM donhangchitiet dhct
-    JOIN sanpham_bienthe bt ON dhct.MaBienThe = bt.MaBienThe
-    WHERE bt.MaSanPham = ?
+  const sql = `
+    UPDATE sanpham
+    SET TrangThai = 'NgungBan'
+    WHERE MaSanPham = ?
   `;
 
-  db.query(sqlCheckOrder, [id], (err, orderData) => {
-    if (err) {
-      console.log("Lỗi check đơn hàng:", err);
-      return res.status(500).json(err);
-    }
+  db.query(sql, [id], (err) => {
+    if (err) return res.status(500).json(err);
 
-    if (orderData.length > 0) {
-      return res.status(400).json({
-        message:
-          "Sản phẩm đã có trong đơn hàng, không nên xóa. Hãy ẩn sản phẩm thay vì xóa.",
-      });
-    }
-
-    const sqlDeleteCart = `
-      DELETE ghct
-      FROM giohangchitiet ghct
-      JOIN sanpham_bienthe bt ON ghct.MaBienThe = bt.MaBienThe
-      WHERE bt.MaSanPham = ?
-    `;
-
-    db.query(sqlDeleteCart, [id], (err2) => {
-      if (err2) {
-        console.log("Lỗi xóa giỏ hàng:", err2);
-        return res.status(500).json(err2);
-      }
-
-      db.query(
-        "DELETE FROM sanpham_bienthe WHERE MaSanPham = ?",
-        [id],
-        (err3) => {
-          if (err3) {
-            console.log("Lỗi xóa biến thể:", err3);
-            return res.status(500).json(err3);
-          }
-
-          db.query("DELETE FROM hinhanh WHERE MaSanPham = ?", [id], (err4) => {
-            if (err4) {
-              console.log("Lỗi xóa hình:", err4);
-              return res.status(500).json(err4);
-            }
-
-            db.query(
-              "DELETE FROM sanpham WHERE MaSanPham = ?",
-              [id],
-              (err5) => {
-                if (err5) {
-                  console.log("Lỗi xóa sản phẩm:", err5);
-                  return res.status(500).json(err5);
-                }
-
-                return res.json({ status: "Success" });
-              },
-            );
-          });
-        },
-      );
+    return res.json({
+      status: "Success",
+      message: "Đã ẩn sản phẩm",
     });
   });
 });
@@ -720,6 +670,7 @@ app.get("/product/:id", (req, res) => {
   LEFT JOIN hinhanh ha
     ON sp.MaSanPham = ha.MaSanPham
   WHERE sp.MaSanPham = ?
+  AND sp.TrangThai = 'DangBan'
   LIMIT 1
 `;
 
@@ -755,23 +706,37 @@ app.get("/product/:id", (req, res) => {
   });
 });
 
+app.put("/admin/products/:id/show", (req, res) => {
+  const sql = `
+    UPDATE sanpham
+    SET TrangThai = 'DangBan'
+    WHERE MaSanPham = ?
+  `;
+
+  db.query(sql, [req.params.id], (err) => {
+    if (err) return res.status(500).json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
 // api xem danh sách sản phẩm ở trang chủ
 app.get("/home/new-products", (req, res) => {
   const sql = `
-  SELECT 
-    sp.MaSanPham,
-    sp.TenSanPham,
-    sp.DonGia,
-    sp.KhuyenMai,
-    th.TenThuongHieu,
-    ha.DuongDan
-  FROM sanpham sp
-  LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
-  LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
-  GROUP BY sp.MaSanPham
-  ORDER BY sp.MaSanPham DESC
-  LIMIT 4
-`;
+    SELECT 
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.DonGia,
+      sp.KhuyenMai,
+      th.TenThuongHieu,
+      ha.DuongDan
+    FROM sanpham sp
+    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    WHERE sp.TrangThai = 'DangBan'
+    GROUP BY sp.MaSanPham
+    ORDER BY sp.MaSanPham DESC
+    LIMIT 4
+  `;
 
   db.query(sql, (err, data) => {
     if (err) return res.status(500).json(err);
@@ -792,6 +757,7 @@ app.get("/home/nike-products", (req, res) => {
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
     WHERE th.TenThuongHieu = 'Nike'
+    AND sp.TrangThai = 'DangBan'
     GROUP BY sp.MaSanPham
     ORDER BY sp.MaSanPham DESC
     LIMIT 8
@@ -816,6 +782,7 @@ app.get("/home/adidas-products", (req, res) => {
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
     WHERE th.TenThuongHieu = 'Adidas'
+    AND sp.TrangThai = 'DangBan'
     GROUP BY sp.MaSanPham
     ORDER BY sp.MaSanPham DESC
     LIMIT 8
@@ -980,6 +947,35 @@ app.delete("/cart/detail/:id", (req, res) => {
   });
 });
 
+app.put("/cart/detail/:id", (req, res) => {
+  const { id } = req.params;
+  const { SoLuong } = req.body;
+
+  if (Number(SoLuong) <= 0) {
+    return res.status(400).json({
+      message: "Số lượng phải lớn hơn 0",
+    });
+  }
+
+  const sql = `
+    UPDATE giohangchitiet
+    SET SoLuong = ?
+    WHERE MaGioHangChiTiet = ?
+  `;
+
+  db.query(sql, [SoLuong, id], (err, result) => {
+    if (err) return res.status(500).json(err);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy sản phẩm trong giỏ hàng",
+      });
+    }
+
+    return res.json({ status: "Success" });
+  });
+});
+
 //api dat hang
 app.get("/orders/:MaNguoiDung", (req, res) => {
   const { MaNguoiDung } = req.params;
@@ -1058,6 +1054,10 @@ app.post("/checkout", (req, res) => {
       message: "Vui lòng nhập đầy đủ thông tin đặt hàng",
     });
   }
+
+  const MaDiaChi = crypto.randomUUID();
+  const MaDonHang = crypto.randomUUID();
+  const MaThanhToan = crypto.randomUUID();
 
   const sqlAddress = `
     INSERT INTO diachi
@@ -1170,6 +1170,86 @@ app.put("/orders/cancel/:MaDonHang", (req, res) => {
     }
 
     return res.json({ status: "Success" });
+  });
+});
+
+//api quan ly don hang admin
+app.get("/admin/orders", (req, res) => {
+  const sql = `
+    SELECT
+      dh.SoDonHang,
+      dh.MaDonHang,
+      dh.TongTien,
+      dh.TrangThai,
+      dc.HoTen,
+      tt.PhuongThucThanhToan
+    FROM donhang dh
+    JOIN diachi dc ON dh.MaDiaChi = dc.MaDiaChi
+    LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
+    ORDER BY dh.SoDonHang DESC
+  `;
+
+  db.query(sql, (err, data) => {
+    if (err) return res.status(500).json(err);
+    return res.json(data);
+  });
+});
+
+app.put("/admin/orders/:MaDonHang/status", (req, res) => {
+  const { MaDonHang } = req.params;
+  const { TrangThai } = req.body;
+
+  const sqlGetOrder = `
+    SELECT TrangThai
+    FROM donhang
+    WHERE MaDonHang = ?
+  `;
+
+  db.query(sqlGetOrder, [MaDonHang], (err, data) => {
+    if (err) return res.status(500).json(err);
+
+    if (data.length === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy đơn hàng",
+      });
+    }
+
+    const oldStatus = data[0].TrangThai;
+
+    const sqlUpdateOrder = `
+      UPDATE donhang
+      SET TrangThai = ?
+      WHERE MaDonHang = ?
+    `;
+
+    db.query(sqlUpdateOrder, [TrangThai, MaDonHang], (err2) => {
+      if (err2) return res.status(500).json(err2);
+
+      // Chỉ trừ kho 1 lần khi chuyển từ Chờ xác nhận -> Đã xác nhận
+      if (oldStatus === "ChoXacNhan" && TrangThai === "DaXacNhan") {
+        const sqlUpdateStock = `
+          UPDATE sanpham_bienthe bt
+          JOIN donhangchitiet dhct
+            ON bt.MaBienThe = dhct.MaBienThe
+          SET bt.SoLuong = bt.SoLuong - dhct.SoLuong
+          WHERE dhct.MaDonHang = ?
+        `;
+
+        db.query(sqlUpdateStock, [MaDonHang], (err3) => {
+          if (err3) return res.status(500).json(err3);
+
+          return res.json({
+            status: "Success",
+            message: "Đã cập nhật trạng thái và trừ kho",
+          });
+        });
+      } else {
+        return res.json({
+          status: "Success",
+          message: "Đã cập nhật trạng thái",
+        });
+      }
+    });
   });
 });
 

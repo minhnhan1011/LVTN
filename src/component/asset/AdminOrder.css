@@ -1,0 +1,155 @@
+.admin-order-content {
+  flex: 1;
+  padding: 35px;
+  background: #f6f7f9;
+  min-height: 100vh;
+}
+
+.admin-order-header {
+  background: white;
+  padding: 22px;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
+}
+
+.admin-order-header h1 {
+  color: #111827;
+  font-size: 28px;
+}
+
+.admin-order-header p {
+  color: #6b7280;
+  margin-top: 6px;
+}
+
+.create-order-btn {
+  background: #111827;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.order-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 25px;
+}
+
+.stat-card {
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
+}
+
+.stat-card span {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 30px;
+  margin-top: 10px;
+  color: #111827;
+}
+
+.admin-order-table-box {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.05);
+}
+
+.admin-order-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-order-table thead {
+  background: #111827;
+  color: white;
+}
+
+.admin-order-table th,
+.admin-order-table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.order-badge {
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.order-badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.order-badge.confirmed {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.order-badge.shipping {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.order-badge.done {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.order-badge.cancel {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.order-action-btn {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.order-action-btn.create {
+  background: #111827;
+  color: white;
+}
+
+.order-action-btn.disabled {
+  background: #e5e7eb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.status-select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 700;
+}
+
+@media (max-width: 1000px) {
+  .order-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .admin-order-table-box {
+    overflow-x: auto;
+  }
+}

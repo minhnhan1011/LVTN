@@ -62,15 +62,12 @@ function ProductAdmin() {
     axios
       .get("http://localhost:5000/admin/product-types")
       .then((res) => setProductTypes(res.data));
-
     axios
       .get("http://localhost:5000/admin/brands")
       .then((res) => setBrands(res.data));
-
     axios
       .get("http://localhost:5000/admin/colors")
       .then((res) => setColors(res.data));
-
     axios
       .get("http://localhost:5000/admin/sizes")
       .then((res) => setSizes(res.data));
@@ -86,12 +83,10 @@ function ProductAdmin() {
 
   const handleVariantChange = (index, e) => {
     const newVariants = [...variants];
-
     newVariants[index] = {
       ...newVariants[index],
       [e.target.name]: e.target.value,
     };
-
     setVariants(newVariants);
   };
 
@@ -205,7 +200,7 @@ function ProductAdmin() {
     try {
       await axios.put(
         `http://localhost:5000/admin/products/${editValues.MaSanPham}`,
-        editValues
+        editValues,
       );
 
       alert("Cập nhật sản phẩm thành công");
@@ -225,7 +220,7 @@ function ProductAdmin() {
 
     try {
       const res = await axios.get(
-        `http://localhost:5000/admin/products/${item.MaSanPham}/variants`
+        `http://localhost:5000/admin/products/${item.MaSanPham}/variants`,
       );
 
       setEditVariants(res.data);
@@ -264,7 +259,7 @@ function ProductAdmin() {
     try {
       await axios.put(
         `http://localhost:5000/admin/products/${currentProductId}/variants`,
-        { variants: editVariants }
+        { variants: editVariants },
       );
 
       alert("Cập nhật biến thể thành công");
@@ -276,21 +271,34 @@ function ProductAdmin() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này?")) return;
+  const handleHideProduct = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn ẩn sản phẩm này?")) return;
 
     try {
       await axios.delete(`http://localhost:5000/admin/products/${id}`);
-      alert("Xóa thành công");
+      alert("Đã ẩn sản phẩm");
       fetchProducts();
     } catch (err) {
       console.log(err);
-      alert(err.response?.data?.message || "Xóa thất bại");
+      alert(err.response?.data?.message || "Ẩn sản phẩm thất bại");
     }
   };
 
   const calcDiscountPrice = (price, discount) => {
     return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  };
+
+  const handleShowProduct = async (id) => {
+    if (!window.confirm("Bạn có chắc muốn hiện lại sản phẩm này?")) return;
+
+    try {
+      await axios.put(`http://localhost:5000/admin/products/${id}/show`);
+      alert("Đã hiện sản phẩm");
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+      alert(err.response?.data?.message || "Hiện sản phẩm thất bại");
+    }
   };
 
   return (
@@ -301,6 +309,7 @@ function ProductAdmin() {
         <nav className="admin-nav">
           <Link to="/admin">Quản lý User</Link>
           <Link to="/admin/products">Quản lý sản phẩm</Link>
+          <Link to="/admin/order">Quản lý đơn hàng</Link>
           <Link to="/" onClick={handleLogout}>
             Đăng xuất
           </Link>
@@ -531,7 +540,7 @@ function ProductAdmin() {
               <strong>
                 {calcDiscountPrice(
                   editValues.DonGia || 0,
-                  editValues.KhuyenMai || 0
+                  editValues.KhuyenMai || 0,
                 ).toLocaleString()}
                 đ
               </strong>
@@ -631,6 +640,7 @@ function ProductAdmin() {
               <th>Giá sau giảm</th>
               <th>Mô tả</th>
               <th>Tổng SL</th>
+              <th>Trạng thái</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -659,7 +669,7 @@ function ProductAdmin() {
                 <td>
                   {calcDiscountPrice(
                     item.DonGia || 0,
-                    item.KhuyenMai || 0
+                    item.KhuyenMai || 0,
                   ).toLocaleString()}
                   đ
                 </td>
@@ -667,15 +677,49 @@ function ProductAdmin() {
                 <td>{item.TongSoLuong}</td>
 
                 <td>
-                  <button onClick={() => handleEditClick(item)}>Sửa SP</button>
+                  <span
+                    className={
+                      item.TrangThai === "DangBan"
+                        ? "status-selling"
+                        : "status-stopped"
+                    }
+                  >
+                    {item.TrangThai === "DangBan" ? "Đang bán" : "Ngưng bán"}
+                  </span>
+                </td>
 
-                  <button onClick={() => handleEditVariantClick(item)}>
-                    Sửa biến thể
-                  </button>
+                <td>
+                  <div className="action-group">
+                    <button
+                      className="btn-edit"
+                      onClick={() => handleEditClick(item)}
+                    >
+                      Sửa SP
+                    </button>
 
-                  <button onClick={() => handleDelete(item.MaSanPham)}>
-                    Xóa
-                  </button>
+                    <button
+                      className="btn-variant"
+                      onClick={() => handleEditVariantClick(item)}
+                    >
+                      Biến thể
+                    </button>
+
+                    {item.TrangThai === "DangBan" ? (
+                      <button
+                        className="btn-hide"
+                        onClick={() => handleHideProduct(item.MaSanPham)}
+                      >
+                        Ẩn
+                      </button>
+                    ) : (
+                      <button
+                        className="btn-show"
+                        onClick={() => handleShowProduct(item.MaSanPham)}
+                      >
+                        Hiện
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
