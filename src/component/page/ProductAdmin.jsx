@@ -47,6 +47,7 @@ function ProductAdmin() {
       .catch((err) => console.log(err));
   };
 
+
   const fetchProducts = async () => {
     try {
       const res = await axios.get("http://localhost:5000/admin/products");
@@ -62,16 +63,23 @@ function ProductAdmin() {
     axios
       .get("http://localhost:5000/admin/product-types")
       .then((res) => setProductTypes(res.data));
+
     axios
       .get("http://localhost:5000/admin/brands")
       .then((res) => setBrands(res.data));
+
     axios
       .get("http://localhost:5000/admin/colors")
       .then((res) => setColors(res.data));
+
     axios
       .get("http://localhost:5000/admin/sizes")
       .then((res) => setSizes(res.data));
   }, []);
+
+  const calcDiscountPrice = (price, discount) => {
+    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  };
 
   const handleChange = (e) => {
     setValues({ ...values, [e.target.name]: e.target.value });
@@ -83,10 +91,12 @@ function ProductAdmin() {
 
   const handleVariantChange = (index, e) => {
     const newVariants = [...variants];
+
     newVariants[index] = {
       ...newVariants[index],
       [e.target.name]: e.target.value,
     };
+
     setVariants(newVariants);
   };
 
@@ -223,7 +233,7 @@ function ProductAdmin() {
         `http://localhost:5000/admin/products/${item.MaSanPham}/variants`,
       );
 
-      setEditVariants(res.data);
+      setEditVariants(res.data.filter((v) => v.TrangThai !== "An"));
     } catch (err) {
       console.log(err);
       alert("Lỗi lấy biến thể sản phẩm");
@@ -241,6 +251,44 @@ function ProductAdmin() {
     setEditVariants(newVariants);
   };
 
+  const addEditVariant = () => {
+    setEditVariants([
+      ...editVariants,
+      {
+        MaBienThe: "",
+        MaMauSac: "",
+        MaSize: "",
+        SoLuong: "",
+        isNew: true,
+      },
+    ]);
+  };
+
+  const handleDeleteVariant = async (variant, index) => {
+    if (variant.isNew || !variant.MaBienThe) {
+      setEditVariants(editVariants.filter((_, i) => i !== index));
+      return;
+    }
+
+    if (!window.confirm("Bạn có chắc muốn xóa biến thể này?")) return;
+
+    try {
+      await axios.delete(
+        `http://localhost:5000/admin/variants/${variant.MaBienThe}`,
+      );
+
+      alert("Đã xóa biến thể");
+
+      setEditVariants((prev) =>
+        prev.filter((item) => item.MaBienThe !== variant.MaBienThe),
+      );
+
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+      alert(err.response?.data?.message || "Xóa biến thể thất bại");
+    }
+  };
   const handleUpdateVariants = async (e) => {
     e.preventDefault();
 
@@ -256,11 +304,27 @@ function ProductAdmin() {
       }
     }
 
+    const oldVariants = editVariants.filter((item) => !item.isNew);
+    const newVariants = editVariants.filter((item) => item.isNew);
+
     try {
-      await axios.put(
-        `http://localhost:5000/admin/products/${currentProductId}/variants`,
-        { variants: editVariants },
-      );
+      if (oldVariants.length > 0) {
+        await axios.put(
+          `http://localhost:5000/admin/products/${currentProductId}/variants`,
+          { variants: oldVariants },
+        );
+      }
+
+      for (let item of newVariants) {
+        await axios.post(
+          `http://localhost:5000/admin/products/${currentProductId}/variants`,
+          {
+            MaMauSac: item.MaMauSac,
+            MaSize: item.MaSize,
+            SoLuong: item.SoLuong,
+          },
+        );
+      }
 
       alert("Cập nhật biến thể thành công");
       setShowVariantForm(false);
@@ -282,10 +346,6 @@ function ProductAdmin() {
       console.log(err);
       alert(err.response?.data?.message || "Ẩn sản phẩm thất bại");
     }
-  };
-
-  const calcDiscountPrice = (price, discount) => {
-    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
   };
 
   const handleShowProduct = async (id) => {
@@ -565,10 +625,10 @@ function ProductAdmin() {
             className="admin-product-form variant-form"
             onSubmit={handleUpdateVariants}
           >
-            <h2 className="variant-form-title">Quản lý tồn kho sản phẩm</h2>
+            <h2 className="variant-form-title">Quản lý biến thể sản phẩm</h2>
 
             {editVariants.map((variant, index) => (
-              <div className="variant-row" key={variant.MaBienThe}>
+              <div className="variant-row" key={variant.MaBienThe || index}>
                 <select
                   name="MaMauSac"
                   value={variant.MaMauSac}
@@ -606,12 +666,28 @@ function ProductAdmin() {
                   onChange={(e) => handleEditVariantChange(index, e)}
                   required
                 />
+
+                <button
+                  type="button"
+                  className="variant-delete-btn"
+                  onClick={() => handleDeleteVariant(variant, index)}
+                >
+                  Xóa
+                </button>
               </div>
             ))}
 
+            <button
+              type="button"
+              className="variant-add-btn"
+              onClick={addEditVariant}
+            >
+              + Thêm biến thể
+            </button>
+
             <div className="variant-actions">
               <button type="submit" className="variant-save-btn">
-                Lưu tồn kho
+                Lưu biến thể
               </button>
 
               <button
@@ -653,7 +729,6 @@ function ProductAdmin() {
                     <img
                       src={`http://localhost:5000${item.DuongDan}`}
                       alt={item.TenSanPham}
-                      width="60"
                     />
                   )}
                 </td>

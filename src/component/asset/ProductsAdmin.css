@@ -387,3 +387,114 @@
   background: #fee2e2;
   color: #dc2626;
 }
+
+.action-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-edit,
+.btn-variant,
+.btn-hide,
+.btn-show {
+  border: none;
+  border-radius: 10px;
+  padding: 9px 14px;
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-edit {
+  background: #2563eb;
+}
+
+.btn-variant {
+  background: #4f46e5;
+}
+
+.btn-hide,
+.variant-delete-btn {
+  background: #ef4444;
+}
+
+.btn-show {
+  background: #16a34a;
+}
+
+.status-selling,
+.status-stopped {
+  display: inline-flex;
+  min-width: 95px;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.status-selling {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-stopped {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.variant-form {
+  grid-template-columns: 1fr;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+.variant-form-title {
+  margin-bottom: 5px;
+}
+
+.variant-form .variant-row {
+  grid-template-columns: 1fr 1fr 1fr auto;
+  background: #f8fafc;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+}
+
+.variant-delete-btn {
+  color: white;
+  border: none;
+  height: 45px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.variant-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.variant-save-btn {
+  background: #111827;
+  color: white;
+  border: none;
+  padding: 13px 22px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.variant-cancel-btn {
+  background: #e5e7eb;
+  color: #111827;
+  border: none;
+  padding: 13px 22px;
+  border-radius: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}

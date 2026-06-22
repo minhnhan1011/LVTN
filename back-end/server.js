@@ -382,6 +382,8 @@ app.get("/admin/sizes", (req, res) => {
   });
 });
 
+
+// api quan ly san pham cua admin
 app.get("/admin/products", (req, res) => {
   const sql = `
     SELECT 
@@ -403,7 +405,9 @@ app.get("/admin/products", (req, res) => {
     LEFT JOIN loaisanpham lsp ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
-    LEFT JOIN sanpham_bienthe bt ON sp.MaSanPham = bt.MaSanPham
+    LEFT JOIN sanpham_bienthe bt 
+      ON sp.MaSanPham = bt.MaSanPham
+      AND bt.TrangThai = 'Hien'
     LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
     LEFT JOIN size sz ON bt.MaSize = sz.MaSize
     GROUP BY 
@@ -411,8 +415,10 @@ app.get("/admin/products", (req, res) => {
       sp.TenSanPham,
       sp.MoTa,
       sp.DonGia,
+      sp.KhuyenMai,
       sp.MaLoaiSanPham,
       sp.MaThuongHieu,
+      sp.TrangThai,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
       ha.DuongDan
@@ -608,9 +614,11 @@ app.get("/admin/products/:id/variants", (req, res) => {
       bt.MaSanPham,
       bt.MaMauSac,
       bt.MaSize,
-      bt.SoLuong
+      bt.SoLuong,
+      bt.TrangThai
     FROM sanpham_bienthe bt
     WHERE bt.MaSanPham = ?
+      AND bt.TrangThai = 'Hien'
   `;
 
   db.query(sql, [id], (err, data) => {
@@ -650,6 +658,102 @@ app.put("/admin/products/:id/variants", (req, res) => {
   return res.json({ status: "Success" });
 });
 
+//api xoa bien the va sua bien the cua san pham admin
+app.post("/admin/products/:id/variants", (req, res) => {
+  const { id } = req.params;
+  const { MaMauSac, MaSize, SoLuong } = req.body;
+
+  if (!MaMauSac || !MaSize || SoLuong === "") {
+    return res.status(400).json({
+      message: "Vui lòng nhập đầy đủ màu, size và số lượng",
+    });
+  }
+
+  const sql = `
+    INSERT INTO sanpham_bienthe
+    (MaSanPham, MaMauSac, MaSize, SoLuong, TrangThai)
+    VALUES (?, ?, ?, ?, 'Hien')
+  `;
+
+  db.query(sql, [id, MaMauSac, MaSize, Number(SoLuong)], (err) => {
+    if (err) return res.status(500).json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
+app.delete("/admin/variants/:MaBienThe", (req, res) => {
+  const { MaBienThe } = req.params;
+
+  const sql = `
+    UPDATE sanpham_bienthe
+    SET TrangThai = 'An'
+    WHERE MaBienThe = ?
+    AND TrangThai = 'Hien'
+  `;
+
+  db.query(sql, [MaBienThe], (err, result) => {
+    if (err) return res.status(500).json(err);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy biến thể hoặc biến thể đã bị ẩn",
+      });
+    }
+
+    return res.json({
+      status: "Success",
+      message: "Đã ẩn biến thể",
+    });
+  });
+});
+
+//api ben trang san pham
+app.get("/products", (req, res) => {
+  const sql = `
+    SELECT 
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.DonGia,
+      sp.KhuyenMai,
+      sp.MoTa,
+      lsp.TenLoaiSanPham,
+      th.TenThuongHieu,
+      ha.DuongDan,
+      GROUP_CONCAT(DISTINCT ms.TenMauSac ORDER BY ms.TenMauSac SEPARATOR ', ') AS DanhSachMau,
+      GROUP_CONCAT(DISTINCT sz.TenSize ORDER BY sz.TenSize SEPARATOR ', ') AS DanhSachSize,
+      COALESCE(SUM(bt.SoLuong), 0) AS TongSoLuong
+    FROM sanpham sp
+    LEFT JOIN loaisanpham lsp ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN sanpham_bienthe bt 
+      ON sp.MaSanPham = bt.MaSanPham
+      AND bt.TrangThai = 'Hien'
+    LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
+    LEFT JOIN size sz ON bt.MaSize = sz.MaSize
+    WHERE sp.TrangThai = 'DangBan'
+    GROUP BY 
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.DonGia,
+      sp.KhuyenMai,
+      sp.MoTa,
+      lsp.TenLoaiSanPham,
+      th.TenThuongHieu,
+      ha.DuongDan
+    ORDER BY sp.MaSanPham DESC
+  `;
+
+  db.query(sql, (err, data) => {
+    if (err) {
+      console.log("Lỗi lấy danh sách sản phẩm:", err);
+      return res.status(500).json(err);
+    }
+
+    return res.json(data);
+  });
+});
+
 // API xem chi tiết sản phẩm
 app.get("/product/:id", (req, res) => {
   const sqlProduct = `
@@ -682,18 +786,19 @@ app.get("/product/:id", (req, res) => {
     }
 
     const sqlVariants = `
-      SELECT
-        bt.MaBienThe,
-        bt.MaMauSac,
-        ms.TenMauSac,
-        bt.MaSize,
-        sz.TenSize,
-        bt.SoLuong
-      FROM sanpham_bienthe bt
-      LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
-      LEFT JOIN size sz ON bt.MaSize = sz.MaSize
-      WHERE bt.MaSanPham = ?
-    `;
+  SELECT
+    bt.MaBienThe,
+    bt.MaMauSac,
+    ms.TenMauSac,
+    bt.MaSize,
+    sz.TenSize,
+    bt.SoLuong
+  FROM sanpham_bienthe bt
+  LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
+  LEFT JOIN size sz ON bt.MaSize = sz.MaSize
+  WHERE bt.MaSanPham = ?
+    AND bt.TrangThai = 'Hien'
+`;
 
     db.query(sqlVariants, [req.params.id], (err2, variantData) => {
       if (err2) return res.status(500).json(err2);
@@ -706,6 +811,8 @@ app.get("/product/:id", (req, res) => {
   });
 });
 
+
+// ????
 app.put("/admin/products/:id/show", (req, res) => {
   const sql = `
     UPDATE sanpham
@@ -894,6 +1001,7 @@ app.post("/cart", (req, res) => {
   });
 });
 
+// api lay thong tin gio hang cua nguoi dung
 app.get("/cart/:MaNguoiDung", (req, res) => {
   const sql = `
     SELECT
@@ -997,18 +1105,20 @@ app.get("/orders/:MaNguoiDung", (req, res) => {
       dhct.SoLuong,
       dhct.DonGia,
       sp.TenSanPham,
-      ms.TenMauSac,
-      sz.TenSize,
+      COALESCE(ms.TenMauSac, 'Biến thể đã ẩn') AS TenMauSac,
+      COALESCE(sz.TenSize, 'Biến thể đã ẩn') AS TenSize,
       ha.DuongDan
     FROM donhang dh
     JOIN diachi dc ON dh.MaDiaChi = dc.MaDiaChi
     JOIN donhangchitiet dhct ON dh.MaDonHang = dhct.MaDonHang
-    JOIN sanpham_bienthe bt ON dhct.MaBienThe = bt.MaBienThe
-    JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
-    JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
-    JOIN size sz ON bt.MaSize = sz.MaSize
+
+    LEFT JOIN sanpham_bienthe bt ON dhct.MaBienThe = bt.MaBienThe
+    LEFT JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
+    LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
+    LEFT JOIN size sz ON bt.MaSize = sz.MaSize
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
     LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
+
     WHERE dh.MaNguoiDung = ?
     ORDER BY dh.SoDonHang DESC
   `;
