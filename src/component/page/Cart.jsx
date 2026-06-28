@@ -53,6 +53,7 @@ function Cart() {
 
   const handleQuantity = async (item, type) => {
     let newQuantity = Number(item.SoLuong);
+    const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 999999);
 
     if (type === "minus") {
       if (newQuantity <= 1) return;
@@ -60,6 +61,11 @@ function Cart() {
     }
 
     if (type === "plus") {
+      if (newQuantity + 1 > stock) {
+        alert(`Trong kho chỉ còn ${stock} sản phẩm`);
+        return;
+      }
+
       newQuantity += 1;
     }
 
@@ -125,14 +131,62 @@ function Cart() {
     return sum + Number(item.DonGia) * Number(item.SoLuong);
   }, 0);
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (selectedCart.length === 0) {
       alert("Vui lòng chọn sản phẩm cần mua");
       return;
     }
 
+    for (let item of selectedCart) {
+      const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 0);
+
+      if (stock <= 0) {
+        alert(`${item.TenSanPham} hiện đã hết hàng`);
+        return;
+      }
+
+      if (Number(item.SoLuong) > stock) {
+        alert(
+          `${item.TenSanPham} chỉ còn ${stock} sản phẩm trong kho. Vui lòng giảm số lượng.`
+        );
+        return;
+      }
+    }
+
     localStorage.setItem("checkoutItems", JSON.stringify(selectedCart));
-    window.location.href = "/checkout";
+
+    if (!MaNguoiDung) {
+      const newCart = cart.filter(
+        (item) => !selectedItems.includes(item.MaGioHangChiTiet)
+      );
+
+      localStorage.setItem("guestCart", JSON.stringify(newCart));
+      setCart(newCart);
+      setSelectedItems([]);
+
+      window.location.href = "/checkout";
+      return;
+    }
+
+    try {
+      await Promise.all(
+        selectedCart.map((item) =>
+          axios.delete(
+            `http://localhost:5000/cart/detail/${item.MaGioHangChiTiet}`
+          )
+        )
+      );
+
+      setCart(
+        cart.filter((item) => !selectedItems.includes(item.MaGioHangChiTiet))
+      );
+      setSelectedItems([]);
+
+      window.location.href = "/checkout";
+    } catch (err) {
+      console.log(err.response?.data || err);
+      alert("Không thể chuyển sang thanh toán");
+    }
   };
 
   return (
@@ -183,10 +237,12 @@ function Cart() {
                     <p>Màu: {item.TenMauSac}</p>
                     <p>Size: {item.TenSize}</p>
 
+                    {item.SoLuongTonKho !== undefined && (
+                      <p>Còn lại: {item.SoLuongTonKho} sản phẩm</p>
+                    )}
+
                     {Number(item.KhuyenMai) > 0 && (
-                      <p className="cart-sale-text">
-                        Giảm {item.KhuyenMai}%
-                      </p>
+                      <p className="cart-sale-text">Giảm {item.KhuyenMai}%</p>
                     )}
 
                     <div className="cart-qty">

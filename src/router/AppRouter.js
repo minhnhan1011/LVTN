@@ -10,6 +10,7 @@ import Cart from "../component/page/Cart";
 import CheckoutPage from "../component/page/CheckoutPage";
 import OrderPage from "../component/page/OrderPage";
 import AdminOrder from "../component/page/AdminOrder";
+import MomoCheckout from "../component/page/MomoCheckout";
 
 function AppRouter() {
     return (
@@ -25,7 +26,8 @@ function AppRouter() {
         <Route path="/cart" element={<Cart />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orderpage" element={<OrderPage />} />
-        <Route path="/admin/order" element={<AdminOrder />} />"
+        <Route path="/admin/order" element={<AdminOrder />} />
+        <Route path="/momo-checkout" element={<MomoCheckout />} />
       </Routes>
     </BrowserRouter>
   );

@@ -7,6 +7,7 @@ const { OAuth2Client } = require("google-auth-library");
 const crypto = require("crypto");
 const multer = require("multer");
 const path = require("path");
+const axios = require("axios");
 
 const client = new OAuth2Client(
   "796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com",
@@ -381,7 +382,6 @@ app.get("/admin/sizes", (req, res) => {
     return res.json(data);
   });
 });
-
 
 // api quan ly san pham cua admin
 app.get("/admin/products", (req, res) => {
@@ -811,7 +811,6 @@ app.get("/product/:id", (req, res) => {
   });
 });
 
-
 // ????
 app.put("/admin/products/:id/show", (req, res) => {
   const sql = `
@@ -1009,6 +1008,7 @@ app.get("/cart/:MaNguoiDung", (req, res) => {
       ghct.MaBienThe,
       ghct.SoLuong,
       ghct.DonGia,
+      bt.SoLuong AS SoLuongTonKho,
       sp.DonGia AS DonGiaGoc,
       sp.KhuyenMai,
       sp.TenSanPham,
@@ -1018,7 +1018,9 @@ app.get("/cart/:MaNguoiDung", (req, res) => {
       ha.DuongDan
     FROM giohang gh
     JOIN giohangchitiet ghct ON gh.MaGioHang = ghct.MaGioHang
-    JOIN sanpham_bienthe bt ON ghct.MaBienThe = bt.MaBienThe
+    JOIN sanpham_bienthe bt 
+      ON ghct.MaBienThe = bt.MaBienThe
+      AND bt.TrangThai = 'Hien'
     JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
     JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
     JOIN size sz ON bt.MaSize = sz.MaSize
@@ -1169,6 +1171,11 @@ app.post("/checkout", (req, res) => {
   const MaDonHang = crypto.randomUUID();
   const MaThanhToan = crypto.randomUUID();
 
+  const orderStatus =
+    PhuongThucThanhToan === "BANK" ? "ChoThanhToan" : "ChoXacNhan";
+
+  const paymentStatus = "ChuaThanhToan";
+
   const sqlAddress = `
     INSERT INTO diachi
     (MaDiaChi, MaNguoiDung, HoTen, SoDienThoai, DiaChiChiTiet, Phuong, Quan, ThanhPho)
@@ -1188,23 +1195,19 @@ app.post("/checkout", (req, res) => {
       ThanhPho,
     ],
     (err) => {
-      if (err) {
-        return res.status(500).json(err);
-      }
+      if (err) return res.status(500).json(err);
 
       const sqlOrder = `
         INSERT INTO donhang
         (MaDonHang, MaNguoiDung, MaDiaChi, TongTien, TrangThai)
-        VALUES (?, ?, ?, ?, 'ChoXacNhan')
+        VALUES (?, ?, ?, ?, ?)
       `;
 
       db.query(
         sqlOrder,
-        [MaDonHang, MaNguoiDung, MaDiaChi, TongTien],
+        [MaDonHang, MaNguoiDung, MaDiaChi, TongTien, orderStatus],
         (err2) => {
-          if (err2) {
-            return res.status(500).json(err2);
-          }
+          if (err2) return res.status(500).json(err2);
 
           const detailValues = items.map((item) => [
             crypto.randomUUID(),
@@ -1215,24 +1218,19 @@ app.post("/checkout", (req, res) => {
           ]);
 
           const sqlDetail = `
-          INSERT INTO donhangchitiet
-          (MaDonHangChiTiet, MaDonHang, MaBienThe, SoLuong, DonGia)
-          VALUES ?
-        `;
-
-          db.query(sqlDetail, [detailValues], (err3) => {
-            if (err3) {
-              return res.status(500).json(err3);
-            }
-
-            const sqlPayment = `
-            INSERT INTO thanhtoan
-            (MaThanhToan, MaDonHang, PhuongThucThanhToan, SoTienThanhToan, TrangThai)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO donhangchitiet
+            (MaDonHangChiTiet, MaDonHang, MaBienThe, SoLuong, DonGia)
+            VALUES ?
           `;
 
-            const paymentStatus =
-              PhuongThucThanhToan === "COD" ? "ChuaThanhToan" : "DaThanhToan";
+          db.query(sqlDetail, [detailValues], (err3) => {
+            if (err3) return res.status(500).json(err3);
+
+            const sqlPayment = `
+              INSERT INTO thanhtoan
+              (MaThanhToan, MaDonHang, PhuongThucThanhToan, SoTienThanhToan, TrangThai)
+              VALUES (?, ?, ?, ?, ?)
+            `;
 
             db.query(
               sqlPayment,
@@ -1244,13 +1242,12 @@ app.post("/checkout", (req, res) => {
                 paymentStatus,
               ],
               (err4) => {
-                if (err4) {
-                  return res.status(500).json(err4);
-                }
+                if (err4) return res.status(500).json(err4);
 
                 return res.json({
                   status: "Success",
                   MaDonHang,
+                  TrangThai: orderStatus,
                 });
               },
             );
@@ -1264,22 +1261,66 @@ app.post("/checkout", (req, res) => {
 app.put("/orders/cancel/:MaDonHang", (req, res) => {
   const { MaDonHang } = req.params;
 
-  const sql = `
-    UPDATE donhang
-    SET TrangThai = 'DaHuy'
-    WHERE MaDonHang = ? AND TrangThai = 'ChoXacNhan'
+  const sqlGetOrder = `
+    SELECT 
+      dh.TrangThai,
+      tt.PhuongThucThanhToan
+    FROM donhang dh
+    LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
+    WHERE dh.MaDonHang = ?
   `;
 
-  db.query(sql, [MaDonHang], (err, result) => {
+  db.query(sqlGetOrder, [MaDonHang], (err, data) => {
     if (err) return res.status(500).json(err);
 
-    if (result.affectedRows === 0) {
+    if (data.length === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy đơn hàng",
+      });
+    }
+
+    const oldStatus = data[0].TrangThai;
+    const paymentMethod = data[0].PhuongThucThanhToan;
+
+    if (oldStatus !== "ChoXacNhan") {
       return res.status(400).json({
         message: "Đơn hàng đã được xác nhận nên không thể hủy",
       });
     }
 
-    return res.json({ status: "Success" });
+    const sqlCancel = `
+      UPDATE donhang
+      SET TrangThai = 'DaHuy'
+      WHERE MaDonHang = ?
+    `;
+
+    db.query(sqlCancel, [MaDonHang], (err2) => {
+      if (err2) return res.status(500).json(err2);
+
+      if (paymentMethod === "BANK") {
+        const sqlRestoreStock = `
+          UPDATE sanpham_bienthe bt
+          JOIN donhangchitiet dhct 
+            ON bt.MaBienThe = dhct.MaBienThe
+          SET bt.SoLuong = bt.SoLuong + dhct.SoLuong
+          WHERE dhct.MaDonHang = ?
+        `;
+
+        db.query(sqlRestoreStock, [MaDonHang], (err3) => {
+          if (err3) return res.status(500).json(err3);
+
+          return res.json({
+            status: "Success",
+            message: "Đã hủy đơn và hoàn lại số lượng",
+          });
+        });
+      } else {
+        return res.json({
+          status: "Success",
+          message: "Đã hủy đơn hàng",
+        });
+      }
+    });
   });
 });
 
@@ -1296,6 +1337,7 @@ app.get("/admin/orders", (req, res) => {
     FROM donhang dh
     JOIN diachi dc ON dh.MaDiaChi = dc.MaDiaChi
     LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
+    WHERE dh.TrangThai IN ('ChoXacNhan', 'DaXacNhan', 'DangGiao', 'HoanThanh', 'DaHuy')
     ORDER BY dh.SoDonHang DESC
   `;
 
@@ -1310,9 +1352,12 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
   const { TrangThai } = req.body;
 
   const sqlGetOrder = `
-    SELECT TrangThai
-    FROM donhang
-    WHERE MaDonHang = ?
+    SELECT 
+      dh.TrangThai,
+      tt.PhuongThucThanhToan
+    FROM donhang dh
+    LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
+    WHERE dh.MaDonHang = ?
   `;
 
   db.query(sqlGetOrder, [MaDonHang], (err, data) => {
@@ -1325,6 +1370,7 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
     }
 
     const oldStatus = data[0].TrangThai;
+    const paymentMethod = data[0].PhuongThucThanhToan;
 
     const sqlUpdateOrder = `
       UPDATE donhang
@@ -1335,8 +1381,11 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
     db.query(sqlUpdateOrder, [TrangThai, MaDonHang], (err2) => {
       if (err2) return res.status(500).json(err2);
 
-      // Chỉ trừ kho 1 lần khi chuyển từ Chờ xác nhận -> Đã xác nhận
-      if (oldStatus === "ChoXacNhan" && TrangThai === "DaXacNhan") {
+      if (
+        oldStatus === "ChoXacNhan" &&
+        TrangThai === "DaXacNhan" &&
+        paymentMethod === "COD"
+      ) {
         const sqlUpdateStock = `
           UPDATE sanpham_bienthe bt
           JOIN donhangchitiet dhct
@@ -1350,7 +1399,7 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
 
           return res.json({
             status: "Success",
-            message: "Đã cập nhật trạng thái và trừ kho",
+            message: "Đã cập nhật trạng thái và trừ kho COD",
           });
         });
       } else {
@@ -1361,6 +1410,161 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
       }
     });
   });
+});
+
+//momo thanh toán
+app.post("/payment/momo", async (req, res) => {
+  var accessKey = "F8BBA842ECF85";
+  var secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
+  var orderInfo = "pay with MoMo";
+  var partnerCode = "MOMO";
+  var redirectUrl = "http://localhost:3000/orderpage";
+  var ipnUrl = "https://aghast-snowfield-specimen.ngrok-free.dev/momo/ipn";
+  var requestType = "payWithMethod";
+  var amount = String(req.body.amount || 50000);
+  var orderId = req.body.MaDonHang;
+  var requestId = orderId;
+  var extraData = "";
+  var orderGroupId = "";
+  var autoCapture = true;
+  var lang = "vi";
+
+  //before sign HMAC SHA256 with format
+  //accessKey=$accessKey&amount=$amount&extraData=$extraData&ipnUrl=$ipnUrl&orderId=$orderId&orderInfo=$orderInfo&partnerCode=$partnerCode&redirectUrl=$redirectUrl&requestId=$requestId&requestType=$requestType
+  var rawSignature =
+    "accessKey=" +
+    accessKey +
+    "&amount=" +
+    amount +
+    "&extraData=" +
+    extraData +
+    "&ipnUrl=" +
+    ipnUrl +
+    "&orderId=" +
+    orderId +
+    "&orderInfo=" +
+    orderInfo +
+    "&partnerCode=" +
+    partnerCode +
+    "&redirectUrl=" +
+    redirectUrl +
+    "&requestId=" +
+    requestId +
+    "&requestType=" +
+    requestType;
+  //puts raw signature
+  console.log("--------------------RAW SIGNATURE----------------");
+  console.log(rawSignature);
+  //signature
+  const crypto = require("crypto");
+  var signature = crypto
+    .createHmac("sha256", secretKey)
+    .update(rawSignature)
+    .digest("hex");
+  console.log("--------------------SIGNATURE----------------");
+  console.log(signature);
+
+  //json object send to MoMo endpoint
+  const requestBody = JSON.stringify({
+    partnerCode: partnerCode,
+    partnerName: "Test",
+    storeId: "MomoTestStore",
+    requestId: requestId,
+    amount: amount,
+    orderId: orderId,
+    orderInfo: orderInfo,
+    redirectUrl: redirectUrl,
+    ipnUrl: ipnUrl,
+    lang: lang,
+    requestType: requestType,
+    autoCapture: autoCapture,
+    extraData: extraData,
+    orderGroupId: orderGroupId,
+    signature: signature,
+  });
+  //Create the HTTPS objects
+  const options = {
+    method: "POST",
+    url: "https://test-payment.momo.vn/v2/gateway/api/create",
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(requestBody),
+    },
+    data: requestBody,
+  };
+
+  let result;
+  try {
+    result = await axios(options);
+    return res.status(200).json(result.data);
+  } catch (error) {
+    return res.status(500).json({
+      statusCode: 500,
+      message: "server error",
+    });
+  }
+});
+
+//api callback momo
+app.post("/momo/ipn", (req, res) => {
+  const { orderId, resultCode } = req.body;
+
+  if (Number(resultCode) === 0) {
+    const sqlUpdateOrder = `
+      UPDATE donhang
+      SET TrangThai = 'ChoXacNhan'
+      WHERE MaDonHang = ?
+    `;
+
+    db.query(sqlUpdateOrder, [orderId], (err) => {
+      if (err) return res.status(500).json(err);
+
+      const sqlUpdatePayment = `
+        UPDATE thanhtoan
+        SET TrangThai = 'DaThanhToan'
+        WHERE MaDonHang = ?
+      `;
+
+      db.query(sqlUpdatePayment, [orderId], (err2) => {
+        if (err2) return res.status(500).json(err2);
+
+        const sqlUpdateStock = `
+          UPDATE sanpham_bienthe bt
+          JOIN donhangchitiet dhct ON bt.MaBienThe = dhct.MaBienThe
+          SET bt.SoLuong = bt.SoLuong - dhct.SoLuong
+          WHERE dhct.MaDonHang = ?
+        `;
+
+        db.query(sqlUpdateStock, [orderId], (err3) => {
+          if (err3) return res.status(500).json(err3);
+
+          return res.status(200).json({ message: "OK" });
+        });
+      });
+    });
+  } else {
+    const sqlFail = `
+      UPDATE donhang
+      SET TrangThai = 'ThanhToanThatBai'
+      WHERE MaDonHang = ?
+    `;
+
+    db.query(sqlFail, [orderId], (err) => {
+      if (err) return res.status(500).json(err);
+
+      const sqlPaymentFail = `
+        UPDATE thanhtoan
+        SET TrangThai = 'BiHuy'
+        WHERE MaDonHang = ?
+      `;
+
+      db.query(sqlPaymentFail, [orderId], (err2) => {
+        if (err2) return res.status(500).json(err2);
+
+        return res.status(200).json({ message: "Payment failed" });
+      });
+    });
+  }
 });
 
 app.listen(5000, () => {

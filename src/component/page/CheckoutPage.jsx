@@ -61,28 +61,16 @@ function CheckoutPage() {
     const { name, value } = e.target;
 
     if (name === "ThanhPho") {
-      setInfo({
-        ...info,
-        ThanhPho: value,
-        Quan: "",
-        Phuong: "",
-      });
+      setInfo({ ...info, ThanhPho: value, Quan: "", Phuong: "" });
       return;
     }
 
     if (name === "Quan") {
-      setInfo({
-        ...info,
-        Quan: value,
-        Phuong: "",
-      });
+      setInfo({ ...info, Quan: value, Phuong: "" });
       return;
     }
 
-    setInfo({
-      ...info,
-      [name]: value,
-    });
+    setInfo({ ...info, [name]: value });
   };
 
   const handleOrder = async (e) => {
@@ -113,12 +101,28 @@ function CheckoutPage() {
     }
 
     try {
-      await axios.post("http://localhost:5000/checkout", {
+      const checkoutRes = await axios.post("http://localhost:5000/checkout", {
         MaNguoiDung,
         ...info,
         items: cart,
         TongTien: total,
       });
+
+      if (info.PhuongThucThanhToan === "BANK") {
+        localStorage.setItem(
+          "momoCheckoutData",
+          JSON.stringify({
+            MaNguoiDung,
+            MaDonHang: checkoutRes.data.MaDonHang,
+            info,
+            items: cart,
+            TongTien: total,
+          })
+        );
+
+        navigate("/momo-checkout");
+        return;
+      }
 
       localStorage.removeItem("checkoutItems");
 
@@ -240,7 +244,7 @@ function CheckoutPage() {
                   checked={info.PhuongThucThanhToan === "BANK"}
                   onChange={handleChange}
                 />
-                Chuyển khoản ngân hàng
+                Chuyển khoản ngân hàng qua MoMo
               </label>
             </section>
 
