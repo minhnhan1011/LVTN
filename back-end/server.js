@@ -1414,6 +1414,8 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
 
 //momo thanh toán
 app.post("/payment/momo", async (req, res) => {
+  console.log("BODY MOMO:", req.body);
+
   var accessKey = "F8BBA842ECF85";
   var secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
   var orderInfo = "pay with MoMo";
@@ -1421,16 +1423,28 @@ app.post("/payment/momo", async (req, res) => {
   var redirectUrl = "http://localhost:3000/orderpage";
   var ipnUrl = "https://aghast-snowfield-specimen.ngrok-free.dev/momo/ipn";
   var requestType = "payWithMethod";
-  var amount = String(req.body.amount || 50000);
-  var orderId = req.body.MaDonHang;
+
+  const MaDonHang = req.body.MaDonHang;
+  const amountNumber = Number(req.body.amount);
+
+  if (!MaDonHang) {
+    return res.status(400).json({ message: "Thiếu MaDonHang" });
+  }
+
+  if (!amountNumber || amountNumber <= 0) {
+    return res.status(400).json({ message: "Số tiền không hợp lệ" });
+  }
+
+  var amount = String(Math.round(amountNumber));
+
+  var orderId = `${MaDonHang}_${Date.now()}`;
   var requestId = orderId;
+
   var extraData = "";
   var orderGroupId = "";
   var autoCapture = true;
   var lang = "vi";
 
-  //before sign HMAC SHA256 with format
-  //accessKey=$accessKey&amount=$amount&extraData=$extraData&ipnUrl=$ipnUrl&orderId=$orderId&orderInfo=$orderInfo&partnerCode=$partnerCode&redirectUrl=$redirectUrl&requestId=$requestId&requestType=$requestType
   var rawSignature =
     "accessKey=" +
     accessKey +
@@ -1452,62 +1466,64 @@ app.post("/payment/momo", async (req, res) => {
     requestId +
     "&requestType=" +
     requestType;
-  //puts raw signature
-  console.log("--------------------RAW SIGNATURE----------------");
-  console.log(rawSignature);
-  //signature
+
   const crypto = require("crypto");
+
   var signature = crypto
     .createHmac("sha256", secretKey)
     .update(rawSignature)
     .digest("hex");
-  console.log("--------------------SIGNATURE----------------");
-  console.log(signature);
 
-  //json object send to MoMo endpoint
-  const requestBody = JSON.stringify({
-    partnerCode: partnerCode,
+  const requestBody = {
+    partnerCode,
     partnerName: "Test",
     storeId: "MomoTestStore",
-    requestId: requestId,
-    amount: amount,
-    orderId: orderId,
-    orderInfo: orderInfo,
-    redirectUrl: redirectUrl,
-    ipnUrl: ipnUrl,
-    lang: lang,
-    requestType: requestType,
-    autoCapture: autoCapture,
-    extraData: extraData,
-    orderGroupId: orderGroupId,
-    signature: signature,
-  });
-  //Create the HTTPS objects
-  const options = {
-    method: "POST",
-    url: "https://test-payment.momo.vn/v2/gateway/api/create",
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Length": Buffer.byteLength(requestBody),
-    },
-    data: requestBody,
+    requestId,
+    amount,
+    orderId,
+    orderInfo,
+    redirectUrl,
+    ipnUrl,
+    lang,
+    requestType,
+    autoCapture,
+    extraData,
+    orderGroupId,
+    signature,
   };
 
-  let result;
+
   try {
-    result = await axios(options);
+    const result = await axios.post(
+      "https://test-payment.momo.vn/v2/gateway/api/create",
+      requestBody,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    console.log("MOMO RESULT:", result.data);
     return res.status(200).json(result.data);
   } catch (error) {
+    console.log("MOMO ERROR:", error.response?.data || error.message);
+
     return res.status(500).json({
-      statusCode: 500,
       message: "server error",
+      error: error.response?.data || error.message,
     });
   }
 });
 
-//api callback momo
+//api acll back momo
 app.post("/momo/ipn", (req, res) => {
+
   const { orderId, resultCode } = req.body;
+
+  // orderId từ MoMo có dạng: MaDonHang_timestamp
+  // ví dụ: 12_1720000000000
+  const MaDonHang = String(orderId).split("_")[0];
 
   if (Number(resultCode) === 0) {
     const sqlUpdateOrder = `
@@ -1516,7 +1532,7 @@ app.post("/momo/ipn", (req, res) => {
       WHERE MaDonHang = ?
     `;
 
-    db.query(sqlUpdateOrder, [orderId], (err) => {
+    db.query(sqlUpdateOrder, [MaDonHang], (err) => {
       if (err) return res.status(500).json(err);
 
       const sqlUpdatePayment = `
@@ -1525,7 +1541,7 @@ app.post("/momo/ipn", (req, res) => {
         WHERE MaDonHang = ?
       `;
 
-      db.query(sqlUpdatePayment, [orderId], (err2) => {
+      db.query(sqlUpdatePayment, [MaDonHang], (err2) => {
         if (err2) return res.status(500).json(err2);
 
         const sqlUpdateStock = `
@@ -1535,7 +1551,7 @@ app.post("/momo/ipn", (req, res) => {
           WHERE dhct.MaDonHang = ?
         `;
 
-        db.query(sqlUpdateStock, [orderId], (err3) => {
+        db.query(sqlUpdateStock, [MaDonHang], (err3) => {
           if (err3) return res.status(500).json(err3);
 
           return res.status(200).json({ message: "OK" });
@@ -1549,7 +1565,7 @@ app.post("/momo/ipn", (req, res) => {
       WHERE MaDonHang = ?
     `;
 
-    db.query(sqlFail, [orderId], (err) => {
+    db.query(sqlFail, [MaDonHang], (err) => {
       if (err) return res.status(500).json(err);
 
       const sqlPaymentFail = `
@@ -1558,7 +1574,7 @@ app.post("/momo/ipn", (req, res) => {
         WHERE MaDonHang = ?
       `;
 
-      db.query(sqlPaymentFail, [orderId], (err2) => {
+      db.query(sqlPaymentFail, [MaDonHang], (err2) => {
         if (err2) return res.status(500).json(err2);
 
         return res.status(200).json({ message: "Payment failed" });

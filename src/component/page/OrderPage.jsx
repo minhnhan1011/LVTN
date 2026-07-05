@@ -11,6 +11,7 @@ function OrderPage() {
   const ordersPerPage = 5;
 
   const convertStatus = (status) => {
+    if (status === "ChoThanhToan") return "Chờ thanh toán";
     if (status === "ChoXacNhan") return "Đang chờ";
     if (status === "DaXacNhan") return "Đã xác nhận";
     if (status === "DangGiao") return "Đang giao";
@@ -20,6 +21,7 @@ function OrderPage() {
   };
 
   const getStatusClass = (status) => {
+    if (status === "ChoThanhToan") return "waiting-payment";
     if (status === "ChoXacNhan") return "pending";
     if (status === "DaXacNhan") return "confirmed";
     if (status === "DangGiao") return "shipping";
@@ -87,6 +89,24 @@ function OrderPage() {
     } catch (err) {
       console.log(err);
       alert(err.response?.data?.message || "Hủy đơn thất bại");
+    }
+  };
+
+  const handleContinuePayment = async (order) => {
+    try {
+      const res = await axios.post("http://localhost:5000/payment/momo", {
+        amount: order.TongTien,
+        MaDonHang: order.MaDonHang,
+      });
+
+      if (res.data.payUrl) {
+        window.location.href = res.data.payUrl;
+      } else {
+        alert("Không nhận được link thanh toán MoMo");
+      }
+    } catch (err) {
+      console.log(err.response?.data || err);
+      alert("Tạo thanh toán MoMo thất bại");
     }
   };
 
@@ -172,6 +192,16 @@ function OrderPage() {
                   ))}
 
                   <div className="order-footer">
+                    {order.TrangThai === "ChoThanhToan" && (
+                      <button
+                        type="button"
+                        className="continue-payment-btn"
+                        onClick={() => handleContinuePayment(order)}
+                      >
+                        Tiếp tục thanh toán
+                      </button>
+                    )}
+
                     {order.TrangThai === "ChoXacNhan" && (
                       <button
                         type="button"
