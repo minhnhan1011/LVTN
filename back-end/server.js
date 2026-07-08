@@ -1413,14 +1413,64 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
 });
 
 //momo thanh toán
+app.get("/momo/return", (req, res) => {
+  console.log("MOMO RETURN:", req.query);
+
+  const { orderId, resultCode } = req.query;
+  const MaDonHang = String(orderId).split("_")[0];
+
+  if (Number(resultCode) === 0) {
+    db.query(
+      `
+      UPDATE donhang
+      SET TrangThai = 'ChoXacNhan'
+      WHERE MaDonHang = ?
+      `,
+      [MaDonHang],
+      (err) => {
+        if (err) {
+          console.log("Lỗi update donhang return:", err);
+          return res.redirect("http://localhost:3000/orderpage");
+        }
+
+        db.query(
+          `
+          UPDATE thanhtoan
+          SET TrangThai = 'DaThanhToan'
+          WHERE MaDonHang = ?
+          `,
+          [MaDonHang],
+          (err2) => {
+            if (err2) console.log("Lỗi update thanhtoan return:", err2);
+
+            return res.redirect("http://localhost:3000/orderpage");
+          }
+        );
+      }
+    );
+  } else {
+    db.query(
+      `
+      UPDATE donhang
+      SET TrangThai = 'ThanhToanThatBai'
+      WHERE MaDonHang = ?
+      `,
+      [MaDonHang],
+      () => {
+        return res.redirect("http://localhost:3000/orderpage");
+      }
+    );
+  }
+});
+
 app.post("/payment/momo", async (req, res) => {
   console.log("BODY MOMO:", req.body);
 
   var accessKey = "F8BBA842ECF85";
   var secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
   var orderInfo = "pay with MoMo";
-  var partnerCode = "MOMO";
-  var redirectUrl = "http://localhost:3000/orderpage";
+  var partnerCode = "MOMO"; 
+  var redirectUrl = "http://localhost:5000/momo/return";
   var ipnUrl = "https://aghast-snowfield-specimen.ngrok-free.dev/momo/ipn";
   var requestType = "payWithMethod";
 
