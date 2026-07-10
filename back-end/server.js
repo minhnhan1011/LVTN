@@ -1412,6 +1412,108 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
   });
 });
 
+//xem chi tiết đơn hàng ở admin
+app.get("/admin/orders/:MaDonHang", (req, res) => {
+  const { MaDonHang } = req.params;
+
+  const sqlOrder = `
+    SELECT
+      dh.SoDonHang,
+      dh.MaDonHang,
+      dh.TongTien,
+      dh.TrangThai,
+      dc.HoTen,
+      dc.SoDienThoai,
+      dc.DiaChiChiTiet,
+      dc.Phuong,
+      dc.Quan,
+      dc.ThanhPho,
+      tt.PhuongThucThanhToan
+    FROM donhang dh
+    JOIN diachi dc
+      ON dh.MaDiaChi = dc.MaDiaChi
+    LEFT JOIN thanhtoan tt
+      ON dh.MaDonHang = tt.MaDonHang
+    WHERE dh.MaDonHang = ?
+    LIMIT 1
+  `;
+
+  db.query(sqlOrder, [MaDonHang], (err, orderData) => {
+    if (err) {
+      console.log("Lỗi lấy thông tin đơn hàng:", err);
+
+      return res.status(500).json({
+        message: "Lỗi lấy thông tin đơn hàng",
+      });
+    }
+
+    if (orderData.length === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy đơn hàng",
+      });
+    }
+
+    const sqlDetails = `
+      SELECT
+        dhct.MaDonHangChiTiet,
+        dhct.MaBienThe,
+        dhct.SoLuong,
+        dhct.DonGia,
+        sp.MaSanPham,
+        sp.TenSanPham,
+        COALESCE(ms.TenMauSac, 'Biến thể đã ẩn') AS TenMauSac,
+        COALESCE(sz.TenSize, 'Biến thể đã ẩn') AS TenSize,
+        ha.DuongDan
+      FROM donhangchitiet dhct
+
+      LEFT JOIN sanpham_bienthe bt
+        ON dhct.MaBienThe = bt.MaBienThe
+
+      LEFT JOIN sanpham sp
+        ON bt.MaSanPham = sp.MaSanPham
+
+      LEFT JOIN mausac ms
+        ON bt.MaMauSac = ms.MaMauSac
+
+      LEFT JOIN size sz
+        ON bt.MaSize = sz.MaSize
+
+      LEFT JOIN hinhanh ha
+        ON sp.MaSanPham = ha.MaSanPham
+
+      WHERE dhct.MaDonHang = ?
+    `;
+
+    db.query(sqlDetails, [MaDonHang], (err2, detailData) => {
+      if (err2) {
+        console.log("Lỗi lấy sản phẩm đơn hàng:", err2);
+
+        return res.status(500).json({
+          message: "Lỗi lấy sản phẩm trong đơn hàng",
+        });
+      }
+
+      const order = {
+        ...orderData[0],
+
+        DiaChiGiaoHang: [
+          orderData[0].DiaChiChiTiet,
+          orderData[0].Phuong,
+          orderData[0].Quan,
+          orderData[0].ThanhPho,
+        ]
+          .filter(Boolean)
+          .join(", "),
+      };
+
+      return res.json({
+        order,
+        details: detailData,
+      });
+    });
+  });
+});
+
 //momo thanh toán
 app.get("/momo/return", (req, res) => {
   console.log("MOMO RETURN:", req.query);

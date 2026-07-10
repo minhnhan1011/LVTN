@@ -13,6 +13,8 @@ function ProductAdmin() {
   const [brands, setBrands] = useState([]);
   const [colors, setColors] = useState([]);
   const [sizes, setSizes] = useState([]);
+  const [search, setSearch] = useState("");
+
 
   const [values, setValues] = useState({
     TenSanPham: "",
@@ -361,6 +363,15 @@ function ProductAdmin() {
     }
   };
 
+  const filteredProducts = products.filter((item) => {
+    const keyword = search.toLowerCase();
+
+    return (
+      String(item.MaSanPham).includes(keyword) ||
+      item.TenSanPham.toLowerCase().includes(keyword)
+    );
+  });
+
   return (
     <div className="admin-page">
       <aside className="admin-sidebar">
@@ -379,6 +390,14 @@ function ProductAdmin() {
       <main className="admin-content">
         <div className="admin-product-header">
           <h1>Quản lý sản phẩm</h1>
+
+          <input
+            type="text"
+            placeholder="Tìm kiếm sản phẩm..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="search-product"
+          />
 
           <button
             className="admin-add-btn"
@@ -722,7 +741,7 @@ function ProductAdmin() {
           </thead>
 
           <tbody>
-            {products.map((item) => (
+            {filteredProducts.map((item) => (
               <tr key={item.MaSanPham}>
                 <td>
                   {item.DuongDan && (

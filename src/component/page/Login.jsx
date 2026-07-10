@@ -107,10 +107,6 @@ const handleGoogleLoginSuccess = async (credentialResponse) => {
 
         <button type="submit">Đăng nhập</button>
 
-        <a href="/" className="forgot">
-          Quên mật khẩu?
-        </a>
-
         <hr />
         <div className= "google-login-container">
         <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => {

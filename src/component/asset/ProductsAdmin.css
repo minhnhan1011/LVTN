@@ -498,3 +498,16 @@
   font-weight: 800;
   cursor: pointer;
 }
+
+.search-product {
+  width: 280px;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+}
+
+.search-product:focus {
+  border-color: #2f80ed;
+}
