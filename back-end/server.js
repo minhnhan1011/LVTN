@@ -8,6 +8,7 @@ const crypto = require("crypto");
 const multer = require("multer");
 const path = require("path");
 const axios = require("axios");
+const { randomUUID } = require("crypto");
 
 const client = new OAuth2Client(
   "796564877926-jseo3et4poimu4iuje2vufomeejdgse5.apps.googleusercontent.com",
@@ -807,6 +808,207 @@ app.get("/product/:id", (req, res) => {
         ...productData[0],
         variants: variantData,
       });
+    });
+  });
+});
+
+
+// api comment bên trang chi tiết sản phẩm
+app.get("/comments/:MaSanPham", (req, res) => {
+  const { MaSanPham } = req.params;
+
+  const sql = `
+    SELECT
+      bl.MaBinhLuan,
+      bl.MaNguoiDung,
+      bl.MaSanPham,
+      bl.NoiDung,
+      bl.MaBinhLuanGoc,
+      bl.VaiTroNguoiDang,
+      bl.TrangThai,
+      nd.HoTen,
+      nd.VaiTro
+    FROM binhluan bl
+    JOIN nguoidung nd
+      ON bl.MaNguoiDung = nd.MaNguoiDung
+    WHERE bl.MaSanPham = ?
+      AND bl.TrangThai = 1
+    ORDER BY bl.MaBinhLuan DESC
+  `;
+
+  db.query(sql, [MaSanPham], (err, data) => {
+    if (err) {
+      console.log("Lỗi lấy bình luận:", err);
+
+      return res.status(500).json({
+        message: "Lỗi lấy danh sách bình luận",
+      });
+    }
+
+    return res.json(data);
+  });
+});
+
+app.post("/comments", (req, res) => {
+  const {
+    MaNguoiDung,
+    MaSanPham,
+    NoiDung,
+    MaBinhLuanGoc = null,
+  } = req.body;
+
+  if (!MaNguoiDung || !MaSanPham) {
+    return res.status(400).json({
+      message: "Thiếu thông tin người dùng hoặc sản phẩm",
+    });
+  }
+
+  if (!NoiDung || !NoiDung.trim()) {
+    return res.status(400).json({
+      message: "Nội dung bình luận không được để trống",
+    });
+  }
+
+  if (NoiDung.trim().length > 500) {
+    return res.status(400).json({
+      message: "Bình luận không được vượt quá 500 ký tự",
+    });
+  }
+
+  // const soTu = NoiDung.trim().split(/\s+/).length;
+  // if (soTu < 5) {
+  //   return res.status(400).json({
+  //     message: "Bình luận phải có ít nhất 5 từ",
+  //   });
+  // }
+
+  const sqlGetUser = `
+    SELECT MaNguoiDung, VaiTro
+    FROM nguoidung
+    WHERE MaNguoiDung = ?
+  `;
+
+  db.query(sqlGetUser, [MaNguoiDung], (err, userData) => {
+    if (err) {
+      console.log("Lỗi kiểm tra người dùng:", err);
+
+      return res.status(500).json({
+        message: "Lỗi kiểm tra người dùng",
+      });
+    }
+
+    if (userData.length === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    const MaBinhLuan = randomUUID();
+    const VaiTroNguoiDang = userData[0].VaiTro;
+
+    const sqlInsert = `
+      INSERT INTO binhluan (
+        MaBinhLuan,
+        MaNguoiDung,
+        MaSanPham,
+        NoiDung,
+        MaBinhLuanGoc,
+        VaiTroNguoiDang,
+        TrangThai
+      )
+      VALUES (?, ?, ?, ?, ?, ?, 1)
+    `;
+
+    const params = [
+      MaBinhLuan,
+      MaNguoiDung,
+      MaSanPham,
+      NoiDung.trim(),
+      MaBinhLuanGoc,
+      VaiTroNguoiDang,
+    ];
+
+    db.query(sqlInsert, params, (err, result) => {
+      if (err) {
+        console.log("Lỗi thêm bình luận:", err);
+
+        return res.status(500).json({
+          message: "Lỗi thêm bình luận",
+        });
+      }
+
+      return res.status(201).json({
+        MaBinhLuan,
+      });
+    });
+  });
+});
+
+app.put("/comments/:MaBinhLuan", (req, res) => {
+  const { MaBinhLuan } = req.params;
+  const { MaNguoiDung } = req.body;
+
+  const sql = `
+    UPDATE binhluan
+    SET TrangThai = 0
+    WHERE MaBinhLuan = ?
+      AND MaNguoiDung = ?
+  `;
+
+  db.query(sql, [MaBinhLuan, MaNguoiDung], (err, result) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({
+        message: "Lỗi xóa bình luận",
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(403).json({
+        message: "Bạn không có quyền xóa bình luận này",
+      });
+    }
+
+    return res.json({
+      message: "Đã xóa bình luận",
+    });
+  });
+});
+
+app.delete("/comments/:MaBinhLuan", (req, res) => {
+  const { MaBinhLuan } = req.params;
+  const { MaNguoiDung } = req.body;
+
+  if (!MaNguoiDung) {
+    return res.status(400).json({
+      message: "Thiếu mã người dùng",
+    });
+  }
+
+  const sql = `
+    UPDATE binhluan
+    SET TrangThai = 0
+    WHERE MaBinhLuan = ?
+      AND MaNguoiDung = ?
+  `;
+
+  db.query(sql, [MaBinhLuan, MaNguoiDung], (err, result) => {
+    if (err) {
+      console.log("Lỗi xóa bình luận:", err);
+
+      return res.status(500).json({
+        message: "Lỗi xóa bình luận",
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(403).json({
+        message: "Bạn không có quyền xóa bình luận này",
+      });
+    }
+
+    return res.json({
+      message: "Đã xóa bình luận",
     });
   });
 });
@@ -1672,9 +1874,6 @@ app.post("/payment/momo", async (req, res) => {
 app.post("/momo/ipn", (req, res) => {
 
   const { orderId, resultCode } = req.body;
-
-  // orderId từ MoMo có dạng: MaDonHang_timestamp
-  // ví dụ: 12_1720000000000
   const MaDonHang = String(orderId).split("_")[0];
 
   if (Number(resultCode) === 0) {

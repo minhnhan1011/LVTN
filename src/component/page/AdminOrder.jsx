@@ -162,10 +162,6 @@ function AdminOrder() {
               Theo dõi trạng thái và quản lý đơn hàng khách hàng.
             </p>
           </div>
-
-          <button className="create-order-btn">
-            + Tạo đơn hàng
-          </button>
         </section>
 
         <section className="order-stats">
@@ -329,7 +325,7 @@ function AdminOrder() {
                   className="close-detail-btn"
                   onClick={handleCloseDetail}
                 >
-                  ×
+                  x
                 </button>
               </div>
 
