@@ -179,3 +179,13 @@
     overflow-x: auto;
   }
 }
+
+.status-lock {
+  color: #dc2626;
+  font-weight: bold;
+}
+
+.status-unlock {
+  color: #16a34a;
+  font-weight: bold;
+}

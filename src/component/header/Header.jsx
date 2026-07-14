@@ -59,6 +59,9 @@ function Header() {
         <Link to="/productpage">Sản phẩm</Link>
 
         {auth && <Link to="/orderpage">Đơn hàng</Link>}
+        <Link to="/cart">
+          Giỏ hàng
+        </Link>
       </nav>
 
       <form className="search-box" onSubmit={handleSearch}>
@@ -72,13 +75,15 @@ function Header() {
       </form>
 
       <div className="auth">
-        <Link to="/cart" className="cart-btn">
-          Giỏ hàng
-        </Link>
-
         {auth ? (
           <>
-            <span className="hello-text">Xin chào, {name}</span>
+            <button
+              type="button"
+              className="hello-text"
+              onClick={() => navigate("/profile")}
+            >
+              {name}
+            </button>
             <button className="logout-btn" onClick={handleLogout}>
               Đăng xuất
             </button>

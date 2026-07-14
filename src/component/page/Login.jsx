@@ -22,7 +22,9 @@ function Login() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    axios.post("http://localhost:5000/login", formData, {
+
+    axios
+      .post("http://localhost:5000/login", formData, {
         withCredentials: true,
       })
       .then((res) => {
@@ -39,46 +41,51 @@ function Login() {
             navigate("/");
           }
         } else {
-          alert("Tài khoản hoặc mật khẩu không đúng");
+          alert(res.data.message || "Tài khoản hoặc mật khẩu không đúng");
         }
       })
       .catch((err) => {
         console.error(err);
-        alert("Có lỗi xảy ra trong quá trình đăng nhập.");
+
+        if (err.response?.status === 403) {
+          alert(err.response.data.message);
+        } else {
+          alert("Có lỗi xảy ra trong quá trình đăng nhập.");
+        }
       });
   };
 
-const handleGoogleLoginSuccess = async (credentialResponse) => {
-  try {
-    const res = await axios.post(
-      "http://localhost:5000/google-login",
-      {
-        credential: credentialResponse.credential,
-      },
-      {
-        withCredentials: true,
-      }
-    );
+  const handleGoogleLoginSuccess = async (credentialResponse) => {
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/google-login",
+        {
+          credential: credentialResponse.credential,
+        },
+        {
+          withCredentials: true,
+        }
+      );
 
-    if (res.data.status === "Success") {
-      const vaitro = res.data.user.VaiTro;
+      if (res.data.status === "Success") {
+        const vaitro = res.data.user.VaiTro;
 
-      localStorage.setItem("VaiTro", vaitro);
-      alert("Đăng nhập Google thành công");
+        localStorage.setItem("VaiTro", vaitro);
+        alert("Đăng nhập Google thành công");
 
-      if (vaitro === "Admin") {
-        navigate("/admin");
+        if (vaitro === "Admin") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
       } else {
-        navigate("/");
+        alert("Đăng nhập Google thất bại");
       }
-    } else {
-      alert("Đăng nhập Google thất bại");
+    } catch (error) {
+      console.error(error);
+      alert("Có lỗi xảy ra trong quá trình đăng nhập.");
     }
-  } catch (error) {
-    console.error(error);
-    alert("Có lỗi xảy ra trong quá trình đăng nhập.");
-  }
-};
+  };
 
   return (
     <div className="login-container">
@@ -108,10 +115,10 @@ const handleGoogleLoginSuccess = async (credentialResponse) => {
         <button type="submit">Đăng nhập</button>
 
         <hr />
-        <div className= "google-login-container">
-        <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => {
-          alert("Đăng nhập thất bại");
-        }} />
+        <div className="google-login-container">
+          <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => {
+            alert("Đăng nhập thất bại");
+          }} />
         </div>
 
         <Link to="/signup" className="create-btn">

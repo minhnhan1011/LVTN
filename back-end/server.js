@@ -99,18 +99,31 @@ app.get("/logout", function (req, res) {
 });
 
 app.get("/auth", verifyUser, (req, res) => {
-  const token = req.cookies.token;
+  const sql = `
+    SELECT MaNguoiDung, HoTen, VaiTro
+    FROM nguoidung
+    WHERE MaNguoiDung = ?
+  `;
 
-  jwt.verify(token, "jwt-secret-key", (err, decoded) => {
+  db.query(sql, [req.MaNguoiDung], (err, data) => {
     if (err) {
-      return res.json({ Status: "Error" });
+      console.log(err);
+      return res.status(500).json({
+        Status: "Error",
+      });
+    }
+
+    if (data.length === 0) {
+      return res.json({
+        Status: "Error",
+      });
     }
 
     return res.json({
       Status: "Success",
-      HoTen: decoded.HoTen,
-      MaNguoiDung: decoded.MaNguoiDung,
-      VaiTro: decoded.VaiTro,
+      MaNguoiDung: data[0].MaNguoiDung,
+      HoTen: data[0].HoTen,
+      VaiTro: data[0].VaiTro,
     });
   });
 });
@@ -125,35 +138,49 @@ app.post("/login", (req, res) => {
     (err, data) => {
       if (err) {
         console.log(err);
-        return res.json({ status: "Error" });
+        return res.status(500).json({
+          status: "Error",
+          message: "Lỗi hệ thống",
+        });
       }
 
-      if (data.length > 0) {
-        const token = jwt.sign(
-          {
-            HoTen: data[0].HoTen,
-            MaNguoiDung: data[0].MaNguoiDung,
-            VaiTro: data[0].VaiTro,
-          },
-          "jwt-secret-key",
-          { expiresIn: "1h" },
-        );
-
-        res.cookie("token", token, {
-          httpOnly: true,
-          sameSite: "lax",
-          secure: false,
-        });
-
+      if (data.length === 0) {
         return res.json({
-          status: "Success",
-          user: data[0],
-          VaiTro: data[0].VaiTro,
+          status: "Fail",
+          message: "Sai tài khoản hoặc mật khẩu",
         });
       }
 
-      return res.json({ status: "Fail" });
-    },
+      // Kiểm tra tài khoản bị khóa
+      if (data[0].TrangThai === "Lock") {
+        return res.status(403).json({
+          status: "Locked",
+          message: "Tài khoản đã bị khóa, không thể đăng nhập",
+        });
+      }
+
+      const token = jwt.sign(
+        {
+          HoTen: data[0].HoTen,
+          MaNguoiDung: data[0].MaNguoiDung,
+          VaiTro: data[0].VaiTro,
+        },
+        "jwt-secret-key",
+        { expiresIn: "1h" }
+      );
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: false,
+      });
+
+      return res.json({
+        status: "Success",
+        user: data[0],
+        VaiTro: data[0].VaiTro,
+      });
+    }
   );
 });
 
@@ -305,7 +332,8 @@ app.get("/admin/users", (req, res) => {
       Email,
       SoDienThoai,
       MatKhau,
-      VaiTro
+      VaiTro,
+      TrangThai
     FROM nguoidung
     ORDER BY MaNguoiDung ASC
   `;
@@ -318,41 +346,125 @@ app.get("/admin/users", (req, res) => {
 
 app.put("/admin/users/:id", (req, res) => {
   const { id } = req.params;
-  const { HoTen, Email, MatKhau, SoDienThoai, VaiTro } = req.body;
+  const { VaiTro, TrangThai } = req.body;
 
   const sql = `
     UPDATE nguoidung
-    SET HoTen = ?, Email = ?, MatKhau = ?, SoDienThoai = ?, VaiTro = ?
+    SET VaiTro = ?, TrangThai = ?
     WHERE MaNguoiDung = ?
   `;
 
-  db.query(sql, [HoTen, Email, MatKhau, SoDienThoai, VaiTro, id], (err) => {
-    if (err) return res.status(500).json(err);
-    return res.json({ status: "Success" });
+  db.query(sql, [VaiTro, TrangThai, id], (err, result) => {
+    if (err) {
+      console.log(err);
+
+      return res.status(500).json({
+        status: "Error",
+        message: "Cập nhật tài khoản thất bại",
+      });
+    }
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        status: "Fail",
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    return res.json({
+      status: "Success",
+      message:
+        TrangThai === "Lock"
+          ? "Khóa tài khoản thành công"
+          : "Mở tài khoản thành công",
+    });
   });
 });
 
-app.delete("/admin/users/:id", (req, res) => {
+//Api Sua thong tin ca nhan nguoi dung
+app.get("/users/:id", (req, res) => {
   const { id } = req.params;
 
-  const sql = "DELETE FROM nguoidung WHERE MaNguoiDung = ?";
+  const sql = `
+    SELECT MaNguoiDung,
+           HoTen,
+           Email,
+           SoDienThoai,
+           MatKhau
+    FROM nguoidung
+    WHERE MaNguoiDung = ?
+  `;
 
-  db.query(sql, [id], (err) => {
-    if (err) return res.status(500).json(err);
-    return res.json({ status: "Success" });
+  db.query(sql, [id], (err, data) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({
+        status: "Error",
+        message: "Lỗi lấy thông tin người dùng",
+      });
+    }
+
+    if (data.length === 0) {
+      return res.status(404).json({
+        status: "Fail",
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    return res.json({
+      status: "Success",
+      user: data[0],
+    });
   });
 });
 
-// app.delete("/admin/users/:id", (req, res) => {
-//   const { id } = req.params;
+app.put("/users/:id", (req, res) => {
+  const { id } = req.params;
+  const { HoTen, Email, SoDienThoai, MatKhau } = req.body;
 
-//   const sql = "DELETE FROM nguoidung WHERE MaNguoiDung = ?";
+  const sql = `
+    UPDATE nguoidung
+    SET HoTen = ?,
+        Email = ?,
+        SoDienThoai = ?,
+        MatKhau = ?
+    WHERE MaNguoiDung = ?
+  `;
 
-//   db.query(sql, [id], (err) => {
-//     if (err) return res.status(500).json(err);
-//     return res.json({ status: "Success" });
-//   });
-// });
+  db.query(
+    sql,
+    [HoTen, Email, SoDienThoai, MatKhau, id],
+    (err, result) => {
+      if (err) {
+        console.log(err);
+
+        if (err.code === "ER_DUP_ENTRY") {
+          return res.status(400).json({
+            status: "Fail",
+            message: "Email hoặc số điện thoại đã tồn tại",
+          });
+        }
+
+        return res.status(500).json({
+          status: "Error",
+          message: "Cập nhật thất bại",
+        });
+      }
+
+      if (result.affectedRows === 0) {
+        return res.status(404).json({
+          status: "Fail",
+          message: "Không tìm thấy người dùng",
+        });
+      }
+
+      return res.json({
+        status: "Success",
+        message: "Cập nhật thông tin thành công",
+      });
+    }
+  );
+});
 
 // API quản lý sản phẩm
 
@@ -1773,7 +1885,7 @@ app.post("/payment/momo", async (req, res) => {
   var accessKey = "F8BBA842ECF85";
   var secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
   var orderInfo = "pay with MoMo";
-  var partnerCode = "MOMO"; 
+  var partnerCode = "MOMO";
   var redirectUrl = "http://localhost:5000/momo/return";
   var ipnUrl = "https://aghast-snowfield-specimen.ngrok-free.dev/momo/ipn";
   var requestType = "payWithMethod";

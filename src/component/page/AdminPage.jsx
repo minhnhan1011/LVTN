@@ -21,6 +21,7 @@ function AdminPage() {
     MatKhau: "",
     SoDienThoai: "",
     VaiTro: "Customer",
+    TrangThai: "HoatDong",
   });
 
   const fetchUsers = async () => {
@@ -45,6 +46,7 @@ function AdminPage() {
       MatKhau: user.MatKhau,
       SoDienThoai: user.SoDienThoai || "",
       VaiTro: user.VaiTro,
+      TrangThai: user.TrangThai,
     });
   };
 
@@ -73,19 +75,6 @@ function AdminPage() {
     }
   };
 
-  const handleDeleteUser = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa user này?")) return;
-
-    try {
-      await axios.delete(`http://localhost:5000/admin/users/${id}`);
-      alert("Xóa user thành công");
-      fetchUsers();
-    } catch (err) {
-      console.log(err);
-      alert("Xóa thất bại");
-    }
-  };
-
   return (
     <div className="admin-page">
       <aside className="admin-sidebar">
@@ -108,41 +97,6 @@ function AdminPage() {
           <form className="admin-edit-form" onSubmit={handleUpdateUser}>
             <h2>Sửa tài khoản</h2>
 
-            <input
-              type="text"
-              name="HoTen"
-              value={editUser.HoTen}
-              onChange={handleEditChange}
-              placeholder="Họ tên"
-              required
-            />
-
-            <input
-              type="email"
-              name="Email"
-              value={editUser.Email}
-              onChange={handleEditChange}
-              placeholder="Email"
-              required
-            />
-
-            <input
-              type="text"
-              name="MatKhau"
-              value={editUser.MatKhau}
-              onChange={handleEditChange}
-              placeholder="Mật khẩu"
-              required
-            />
-
-            <input
-              type="text"
-              name="SoDienThoai"
-              value={editUser.SoDienThoai}
-              onChange={handleEditChange}
-              placeholder="Số điện thoại"
-            />
-
             <select
               name="VaiTro"
               value={editUser.VaiTro}
@@ -150,6 +104,15 @@ function AdminPage() {
             >
               <option value="Admin">Admin</option>
               <option value="Customer">Customer</option>
+            </select>
+
+            <select
+              name="TrangThai"
+              value={editUser.TrangThai}
+              onChange={handleEditChange}
+            >
+              <option value="Lock">Khoá tài khoản</option>
+              <option value="HoatDong">Mở tài khoản</option>
             </select>
 
             <div className="admin-form-actions">
@@ -177,6 +140,7 @@ function AdminPage() {
               <th>Số điện thoại</th>
               <th>Mật khẩu</th>
               <th>Quyền</th>
+              <th>Trạng thái</th>
               <th>Thao tác</th>
             </tr>
           </thead>
@@ -189,6 +153,7 @@ function AdminPage() {
                 <td>{user.Email}</td>
                 <td>{user.SoDienThoai}</td>
                 <td>{user.MatKhau}</td>
+
                 <td>
                   <span
                     className={
@@ -200,6 +165,21 @@ function AdminPage() {
                     {user.VaiTro}
                   </span>
                 </td>
+
+                {/* Cột trạng thái */}
+                <td>
+                  <span
+                    className={
+                      user.TrangThai === "Lock"
+                        ? "status-lock"
+                        : "status-unlock"
+                    }
+                  >
+                    {user.TrangThai}
+                  </span>
+                </td>
+
+                {/* Cột thao tác */}
                 <td>
                   <div className="table-actions">
                     <button
@@ -207,13 +187,6 @@ function AdminPage() {
                       onClick={() => handleEditClick(user)}
                     >
                       Sửa
-                    </button>
-
-                    <button
-                      className="btn-delete"
-                      onClick={() => handleDeleteUser(user.MaNguoiDung)}
-                    >
-                      Xóa
                     </button>
                   </div>
                 </td>
