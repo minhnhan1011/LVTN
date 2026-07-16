@@ -339,7 +339,10 @@ app.get("/admin/users", (req, res) => {
   `;
 
   db.query(sql, (err, data) => {
-    if (err) return res.status(500).json(err);
+    if (err){
+      // console.log(err);
+      return res.status(500).json(err)
+    } ;
     return res.json(data);
   });
 });
@@ -1125,7 +1128,7 @@ app.delete("/comments/:MaBinhLuan", (req, res) => {
   });
 });
 
-// ????
+// api trang thai san pham cua admin
 app.put("/admin/products/:id/show", (req, res) => {
   const sql = `
     UPDATE sanpham

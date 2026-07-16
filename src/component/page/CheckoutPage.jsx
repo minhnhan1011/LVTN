@@ -7,6 +7,7 @@ import "../asset/CheckoutPage.css";
 function CheckoutPage() {
   const [cart, setCart] = useState([]);
   const navigate = useNavigate();
+  // const [DiaChiChiTiet, setDiaChiChiTiet] = useState("");
 
   const [info, setInfo] = useState({
     HoTen: "",
@@ -75,6 +76,11 @@ function CheckoutPage() {
 
   const handleOrder = async (e) => {
     e.preventDefault();
+
+    // if (DiaChiChiTiet.trim().split(/\s+/).length < 5) {
+    //   alert("Địa chỉ chi tiết phải có ít nhất 5 từ");
+    //   return;
+    // }
 
     if (cart.length === 0) {
       alert("Không có sản phẩm để thanh toán");

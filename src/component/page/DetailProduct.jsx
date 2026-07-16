@@ -201,6 +201,11 @@ function DetailProduct() {
       return;
     }
 
+    // if (commentContent.trim().split(/\s+/).length < 5){
+    //   alert("Bình luận phải có ít nhất 5 từ");
+    //   return;
+    // }
+
     try {
       setCommentLoading(true);
 
