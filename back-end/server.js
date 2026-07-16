@@ -1451,7 +1451,7 @@ app.get("/orders/:MaNguoiDung", (req, res) => {
   });
 });
 
-app.post("/checkout", (req, res) => {
+app.post("/checkout", async (req, res) => {
   const {
     MaNguoiDung,
     HoTen,
@@ -1465,6 +1465,7 @@ app.post("/checkout", (req, res) => {
     TongTien,
   } = req.body;
 
+  // kiểm tra dữ liệu
   if (
     !MaNguoiDung ||
     !HoTen ||
@@ -1473,7 +1474,8 @@ app.post("/checkout", (req, res) => {
     !Phuong ||
     !Quan ||
     !ThanhPho ||
-    !items ||
+    !PhuongThucThanhToan ||
+    !Array.isArray(items) ||
     items.length === 0
   ) {
     return res.status(400).json({
@@ -1485,91 +1487,141 @@ app.post("/checkout", (req, res) => {
   const MaDonHang = crypto.randomUUID();
   const MaThanhToan = crypto.randomUUID();
 
-  const orderStatus =
-    PhuongThucThanhToan === "BANK" ? "ChoThanhToan" : "ChoXacNhan";
-
+  const orderStatus = "ChoXacNhan";
   const paymentStatus = "ChuaThanhToan";
 
-  const sqlAddress = `
-    INSERT INTO diachi
-    (MaDiaChi, MaNguoiDung, HoTen, SoDienThoai, DiaChiChiTiet, Phuong, Quan, ThanhPho)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `;
+  try {
+    // 2. Thêm địa chỉ giao hàng
+    await db.promise().query(
+      `
+      INSERT INTO diachi (
+        MaDiaChi,
+        MaNguoiDung,
+        HoTen,
+        SoDienThoai,
+        DiaChiChiTiet,
+        Phuong,
+        Quan,
+        ThanhPho
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        MaDiaChi,
+        MaNguoiDung,
+        HoTen,
+        SoDienThoai,
+        DiaChiChiTiet,
+        Phuong,
+        Quan,
+        ThanhPho,
+      ]
+    );
 
-  db.query(
-    sqlAddress,
-    [
-      MaDiaChi,
-      MaNguoiDung,
-      HoTen,
-      SoDienThoai,
-      DiaChiChiTiet,
-      Phuong,
-      Quan,
-      ThanhPho,
-    ],
-    (err) => {
-      if (err) return res.status(500).json(err);
+    // 3. Tạo đơn hàng
+    await db.promise().query(
+      `
+      INSERT INTO donhang (
+        MaDonHang,
+        MaNguoiDung,
+        MaDiaChi,
+        TongTien,
+        TrangThai
+      )
+      VALUES (?, ?, ?, ?, ?)
+      `,
+      [
+        MaDonHang,
+        MaNguoiDung,
+        MaDiaChi,
+        Number(TongTien),
+        orderStatus,
+      ]
+    );
 
-      const sqlOrder = `
-        INSERT INTO donhang
-        (MaDonHang, MaNguoiDung, MaDiaChi, TongTien, TrangThai)
-        VALUES (?, ?, ?, ?, ?)
-      `;
+    // 4. Thêm chi tiết đơn hàng
+    const detailValues = items.map((item) => [
+      crypto.randomUUID(),
+      MaDonHang,
+      item.MaBienThe,
+      Number(item.SoLuong),
+      Number(item.DonGia),
+    ]);
 
-      db.query(
-        sqlOrder,
-        [MaDonHang, MaNguoiDung, MaDiaChi, TongTien, orderStatus],
-        (err2) => {
-          if (err2) return res.status(500).json(err2);
+    await db.promise().query(
+      `
+      INSERT INTO donhangchitiet (
+        MaDonHangChiTiet,
+        MaDonHang,
+        MaBienThe,
+        SoLuong,
+        DonGia
+      )
+      VALUES ?
+      `,
+      [detailValues]
+    );
 
-          const detailValues = items.map((item) => [
-            crypto.randomUUID(),
-            MaDonHang,
-            item.MaBienThe,
-            item.SoLuong,
-            item.DonGia,
-          ]);
+    // 5. Tạo thông tin thanh toán
+    await db.promise().query(
+      `
+      INSERT INTO thanhtoan (
+        MaThanhToan,
+        MaDonHang,
+        PhuongThucThanhToan,
+        SoTienThanhToan,
+        TrangThai
+      )
+      VALUES (?, ?, ?, ?, ?)
+      `,
+      [
+        MaThanhToan,
+        MaDonHang,
+        PhuongThucThanhToan,
+        Number(TongTien),
+        paymentStatus,
+      ]
+    );
 
-          const sqlDetail = `
-            INSERT INTO donhangchitiet
-            (MaDonHangChiTiet, MaDonHang, MaBienThe, SoLuong, DonGia)
-            VALUES ?
-          `;
+    // 6. Nếu thanh toán MoMo thì chưa xóa giỏ hàng
+    if (PhuongThucThanhToan === "BANK") {
+      return res.json({
+        status: "Success",
+        message: "Đã tạo đơn hàng, chờ thanh toán MoMo",
+        MaDonHang,
+        TrangThai: orderStatus,
+      });
+    }
 
-          db.query(sqlDetail, [detailValues], (err3) => {
-            if (err3) return res.status(500).json(err3);
+    // 7. Nếu COD thì xóa sản phẩm đã đặt khỏi giỏ
+    const cartDetailIds = items
+      .map((item) => item.MaGioHangChiTiet)
+      .filter(Boolean);
 
-            const sqlPayment = `
-              INSERT INTO thanhtoan
-              (MaThanhToan, MaDonHang, PhuongThucThanhToan, SoTienThanhToan, TrangThai)
-              VALUES (?, ?, ?, ?, ?)
-            `;
-
-            db.query(
-              sqlPayment,
-              [
-                MaThanhToan,
-                MaDonHang,
-                PhuongThucThanhToan,
-                TongTien,
-                paymentStatus,
-              ],
-              (err4) => {
-                if (err4) return res.status(500).json(err4);
-
-                return res.json({
-                  status: "Success",
-                  MaDonHang,
-                  TrangThai: orderStatus,
-                });
-              },
-            );
-          });
-        },
+    if (cartDetailIds.length > 0) {
+      await db.promise().query(
+        `
+        DELETE FROM giohangchitiet
+        WHERE MaGioHangChiTiet IN (?)
+        `,
+        [cartDetailIds]
       );
-    },
-  );
+    }
+
+    return res.json({
+      status: "Success",
+      message: "Đặt hàng thành công",
+      MaDonHang,
+      TrangThai: orderStatus,
+    });
+  } catch (error) {
+    console.log("Lỗi checkout:", error);
+
+    return res.status(500).json({
+      message: "Đặt hàng thất bại",
+      error: error.sqlMessage || error.message,
+    });
+  }
 });
 
 app.put("/orders/cancel/:MaDonHang", (req, res) => {
@@ -1829,55 +1881,55 @@ app.get("/admin/orders/:MaDonHang", (req, res) => {
 });
 
 //momo thanh toán
-app.get("/momo/return", (req, res) => {
-  console.log("MOMO RETURN:", req.query);
+// app.get("/momo/return", (req, res) => {
+//   console.log("MOMO RETURN:", req.query);
 
-  const { orderId, resultCode } = req.query;
-  const MaDonHang = String(orderId).split("_")[0];
+//   const { orderId, resultCode } = req.query;
+//   const MaDonHang = String(orderId).split("_")[0];
 
-  if (Number(resultCode) === 0) {
-    db.query(
-      `
-      UPDATE donhang
-      SET TrangThai = 'ChoXacNhan'
-      WHERE MaDonHang = ?
-      `,
-      [MaDonHang],
-      (err) => {
-        if (err) {
-          console.log("Lỗi update donhang return:", err);
-          return res.redirect("http://localhost:3000/orderpage");
-        }
+//   if (Number(resultCode) === 0) {
+//     db.query(
+//       `
+//       UPDATE donhang
+//       SET TrangThai = 'ChoXacNhan'
+//       WHERE MaDonHang = ?
+//       `,
+//       [MaDonHang],
+//       (err) => {
+//         if (err) {
+//           console.log("Lỗi update donhang return:", err);
+//           return res.redirect("http://localhost:3000/orderpage");
+//         }
 
-        db.query(
-          `
-          UPDATE thanhtoan
-          SET TrangThai = 'DaThanhToan'
-          WHERE MaDonHang = ?
-          `,
-          [MaDonHang],
-          (err2) => {
-            if (err2) console.log("Lỗi update thanhtoan return:", err2);
+//         db.query(
+//           `
+//           UPDATE thanhtoan
+//           SET TrangThai = 'DaThanhToan'
+//           WHERE MaDonHang = ?
+//           `,
+//           [MaDonHang],
+//           (err2) => {
+//             if (err2) console.log("Lỗi update thanhtoan return:", err2);
 
-            return res.redirect("http://localhost:3000/orderpage");
-          }
-        );
-      }
-    );
-  } else {
-    db.query(
-      `
-      UPDATE donhang
-      SET TrangThai = 'ThanhToanThatBai'
-      WHERE MaDonHang = ?
-      `,
-      [MaDonHang],
-      () => {
-        return res.redirect("http://localhost:3000/orderpage");
-      }
-    );
-  }
-});
+//             return res.redirect("http://localhost:3000/orderpage");
+//           }
+//         );
+//       }
+//     );
+//   } else {
+//     db.query(
+//       `
+//       UPDATE donhang
+//       SET TrangThai = 'ThanhToanThatBai'
+//       WHERE MaDonHang = ?
+//       `,
+//       [MaDonHang],
+//       () => {
+//         return res.redirect("http://localhost:3000/orderpage");
+//       }
+//     );
+//   }
+// });
 
 app.post("/payment/momo", async (req, res) => {
   console.log("BODY MOMO:", req.body);
@@ -1886,7 +1938,7 @@ app.post("/payment/momo", async (req, res) => {
   var secretKey = "K951B6PE1waDMi640xX08PD3vg6EkVlz";
   var orderInfo = "pay with MoMo";
   var partnerCode = "MOMO";
-  var redirectUrl = "http://localhost:5000/momo/return";
+  var redirectUrl = "http://localhost:3000/orderPage";
   var ipnUrl = "https://aghast-snowfield-specimen.ngrok-free.dev/momo/ipn";
   var requestType = "payWithMethod";
 
@@ -1991,12 +2043,15 @@ app.post("/momo/ipn", (req, res) => {
   if (Number(resultCode) === 0) {
     const sqlUpdateOrder = `
       UPDATE donhang
-      SET TrangThai = 'ChoXacNhan'
+      SET TrangThai = 'DaXacNhan'
       WHERE MaDonHang = ?
     `;
 
     db.query(sqlUpdateOrder, [MaDonHang], (err) => {
-      if (err) return res.status(500).json(err);
+      if (err) {
+        console.log("Lỗi cập nhật đơn hàng:", err);
+        return res.status(500).json(err);
+      }
 
       const sqlUpdatePayment = `
         UPDATE thanhtoan
@@ -2005,47 +2060,64 @@ app.post("/momo/ipn", (req, res) => {
       `;
 
       db.query(sqlUpdatePayment, [MaDonHang], (err2) => {
-        if (err2) return res.status(500).json(err2);
+        if (err2) {
+          console.log("Lỗi cập nhật thanh toán:", err2);
+          return res.status(500).json(err2);
+        }
 
         const sqlUpdateStock = `
           UPDATE sanpham_bienthe bt
-          JOIN donhangchitiet dhct ON bt.MaBienThe = dhct.MaBienThe
+          JOIN donhangchitiet dhct
+            ON bt.MaBienThe = dhct.MaBienThe
           SET bt.SoLuong = bt.SoLuong - dhct.SoLuong
           WHERE dhct.MaDonHang = ?
         `;
 
-        db.query(sqlUpdateStock, [MaDonHang], (err3) => {
-          if (err3) return res.status(500).json(err3);
+        db.query(sqlUpdateStock, [MaDonHang], (err3, result3) => {
+          if (err3) {
+            console.log("Lỗi trừ tồn kho:", err3);
+            return res.status(500).json(err3);
+          }
 
-          return res.status(200).json({ message: "OK" });
+          console.log(
+            "Số biến thể đã trừ tồn:",
+            result3.affectedRows
+          );
+
+          return res.status(200).json({
+            message: "Thanh toán thành công",
+          });
         });
       });
     });
   } else {
-    const sqlFail = `
+    // Thanh toán thất bại hoặc bị hủy
+    const sqlFailOrder = `
       UPDATE donhang
-      SET TrangThai = 'ThanhToanThatBai'
+      SET TrangThai = 'DaHuy'
       WHERE MaDonHang = ?
     `;
 
-    db.query(sqlFail, [MaDonHang], (err) => {
+    db.query(sqlFailOrder, [MaDonHang], (err) => {
       if (err) return res.status(500).json(err);
 
-      const sqlPaymentFail = `
+      const sqlFailPayment = `
         UPDATE thanhtoan
         SET TrangThai = 'BiHuy'
         WHERE MaDonHang = ?
       `;
 
-      db.query(sqlPaymentFail, [MaDonHang], (err2) => {
+      db.query(sqlFailPayment, [MaDonHang], (err2) => {
         if (err2) return res.status(500).json(err2);
 
-        return res.status(200).json({ message: "Payment failed" });
+        return res.status(200).json({
+          message: "Thanh toán thất bại",
+        });
       });
     });
   }
 });
 
-app.listen(5000, () => {
-  console.log("Server đang chạy trên cổng 5000");
-});
+    app.listen(5000, () => {
+      console.log("Server đang chạy trên cổng 5000");
+    });

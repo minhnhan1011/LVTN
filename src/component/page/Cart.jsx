@@ -131,63 +131,32 @@ function Cart() {
     return sum + Number(item.DonGia) * Number(item.SoLuong);
   }, 0);
 
-  const handleCheckout = async () => {
-    if (selectedCart.length === 0) {
-      alert("Vui lòng chọn sản phẩm cần mua");
+  const handleCheckout = () => {
+  if (selectedCart.length === 0) {
+    alert("Vui lòng chọn sản phẩm cần mua");
+    return;
+  }
+
+  for (const item of selectedCart) {
+    const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 0);
+
+    if (stock <= 0) {
+      alert(`${item.TenSanPham} hiện đã hết hàng`);
       return;
     }
 
-    for (let item of selectedCart) {
-      const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 0);
-
-      if (stock <= 0) {
-        alert(`${item.TenSanPham} hiện đã hết hàng`);
-        return;
-      }
-
-      if (Number(item.SoLuong) > stock) {
-        alert(
-          `${item.TenSanPham} chỉ còn ${stock} sản phẩm trong kho. Vui lòng giảm số lượng.`
-        );
-        return;
-      }
-    }
-
-    localStorage.setItem("checkoutItems", JSON.stringify(selectedCart));
-
-    if (!MaNguoiDung) {
-      const newCart = cart.filter(
-        (item) => !selectedItems.includes(item.MaGioHangChiTiet)
+    if (Number(item.SoLuong) > stock) {
+      alert(
+        `${item.TenSanPham} chỉ còn ${stock} sản phẩm trong kho. Vui lòng giảm số lượng.`
       );
-
-      localStorage.setItem("guestCart", JSON.stringify(newCart));
-      setCart(newCart);
-      setSelectedItems([]);
-
-      window.location.href = "/checkout";
       return;
     }
+  }
 
-    try {
-      await Promise.all(
-        selectedCart.map((item) =>
-          axios.delete(
-            `http://localhost:5000/cart/detail/${item.MaGioHangChiTiet}`
-          )
-        )
-      );
+  localStorage.setItem("checkoutItems", JSON.stringify(selectedCart));
 
-      setCart(
-        cart.filter((item) => !selectedItems.includes(item.MaGioHangChiTiet))
-      );
-      setSelectedItems([]);
-
-      window.location.href = "/checkout";
-    } catch (err) {
-      console.log(err.response?.data || err);
-      alert("Không thể chuyển sang thanh toán");
-    }
-  };
+  window.location.href = "/checkout";
+};
 
   return (
     <>
