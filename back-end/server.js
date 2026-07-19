@@ -507,48 +507,120 @@ app.get("/admin/products", (req, res) => {
       sp.TenSanPham,
       sp.MoTa,
       sp.DonGia,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       sp.MaLoaiSanPham,
       sp.MaThuongHieu,
       sp.TrangThai,
+
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
       ha.DuongDan,
-      GROUP_CONCAT(DISTINCT ms.TenMauSac ORDER BY ms.TenMauSac SEPARATOR ', ') AS DanhSachMau,
-      GROUP_CONCAT(DISTINCT sz.TenSize ORDER BY sz.TenSize SEPARATOR ', ') AS DanhSachSize,
+
+      km.TenKhuyenMai,
+      km.LoaiGiamGia,
+      km.GiaTriGiam,
+      km.NgayBatDau,
+      km.NgayKetThuc,
+      km.TrangThai AS TrangThaiKhuyenMai,
+
+      CASE
+        WHEN km.MaKhuyenMai IS NULL THEN sp.DonGia
+
+        WHEN km.TrangThai <> 'HoatDong' THEN sp.DonGia
+
+        WHEN NOW() NOT BETWEEN km.NgayBatDau AND km.NgayKetThuc
+          THEN sp.DonGia
+
+        WHEN km.LoaiGiamGia = 'PhanTram'
+          THEN sp.DonGia - (sp.DonGia * km.GiaTriGiam / 100)
+
+        WHEN km.LoaiGiamGia = 'SoTien'
+          THEN GREATEST(sp.DonGia - km.GiaTriGiam, 0)
+
+        ELSE sp.DonGia
+      END AS GiaSauKhuyenMai,
+
+      GROUP_CONCAT(
+        DISTINCT ms.TenMauSac
+        ORDER BY ms.TenMauSac
+        SEPARATOR ', '
+      ) AS DanhSachMau,
+
+      GROUP_CONCAT(
+        DISTINCT sz.TenSize
+        ORDER BY sz.TenSize
+        SEPARATOR ', '
+      ) AS DanhSachSize,
+
       COALESCE(SUM(bt.SoLuong), 0) AS TongSoLuong
+
     FROM sanpham sp
-    LEFT JOIN loaisanpham lsp ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
-    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
-    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+
+    LEFT JOIN loaisanpham lsp
+      ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+
+    LEFT JOIN thuonghieu th
+      ON sp.MaThuongHieu = th.MaThuongHieu
+
+    LEFT JOIN hinhanh ha
+      ON sp.MaSanPham = ha.MaSanPham
+
+    LEFT JOIN khuyenmai km
+      ON sp.MaKhuyenMai = km.MaKhuyenMai
+
     LEFT JOIN sanpham_bienthe bt 
       ON sp.MaSanPham = bt.MaSanPham
       AND bt.TrangThai = 'Hien'
-    LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
-    LEFT JOIN size sz ON bt.MaSize = sz.MaSize
+
+    LEFT JOIN mausac ms
+      ON bt.MaMauSac = ms.MaMauSac
+
+    LEFT JOIN size sz
+      ON bt.MaSize = sz.MaSize
+
     GROUP BY 
       sp.MaSanPham,
       sp.TenSanPham,
       sp.MoTa,
       sp.DonGia,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       sp.MaLoaiSanPham,
       sp.MaThuongHieu,
       sp.TrangThai,
+
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
-      ha.DuongDan
+      ha.DuongDan,
+
+      km.TenKhuyenMai,
+      km.LoaiGiamGia,
+      km.GiaTriGiam,
+      km.NgayBatDau,
+      km.NgayKetThuc,
+      km.TrangThai
+
     ORDER BY sp.MaSanPham DESC
   `;
 
   db.query(sql, (err, data) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      console.log("Lỗi lấy danh sách sản phẩm:", err);
+      return res.status(500).json(err);
+    }
+
     return res.json(data);
   });
 });
 
 app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
-  const { TenSanPham, MaLoaiSanPham, MaThuongHieu, DonGia, MoTa } = req.body;
+  const {
+    TenSanPham,
+    MaLoaiSanPham,
+    MaThuongHieu,
+    DonGia,
+    MoTa,
+    MaKhuyenMai,
+  } = req.body;
 
   if (!TenSanPham || !MaLoaiSanPham || !MaThuongHieu || !DonGia) {
     return res.status(400).json({
@@ -594,8 +666,15 @@ app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
 
   const sqlProduct = `
     INSERT INTO sanpham
-    (TenSanPham, MaLoaiSanPham, MaThuongHieu, DonGia, MoTa)
-    VALUES (?, ?, ?, ?, ?)
+    (
+      TenSanPham,
+      MaLoaiSanPham,
+      MaThuongHieu,
+      DonGia,
+      MoTa,
+      MaKhuyenMai
+    )
+    VALUES (?, ?, ?, ?, ?, ?)
   `;
 
   const productValues = [
@@ -604,6 +683,7 @@ app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
     MaThuongHieu,
     DonGia,
     MoTa || "",
+    MaKhuyenMai || null,
   ];
 
   db.query(sqlProduct, productValues, (err, data) => {
@@ -683,8 +763,14 @@ app.delete("/admin/products/:id", (req, res) => {
 app.put("/admin/products/:id", (req, res) => {
   const { id } = req.params;
 
-  const { TenSanPham, MaLoaiSanPham, MaThuongHieu, DonGia, MoTa, KhuyenMai } =
-    req.body;
+  const {
+    TenSanPham,
+    MaLoaiSanPham,
+    MaThuongHieu,
+    DonGia,
+    MoTa,
+    MaKhuyenMai,
+  } = req.body;
 
   const sql = `
     UPDATE sanpham
@@ -694,7 +780,7 @@ app.put("/admin/products/:id", (req, res) => {
       MaThuongHieu = ?,
       DonGia = ?,
       MoTa = ?,
-      KhuyenMai = ?
+      MaKhuyenMai = ?
     WHERE MaSanPham = ?
   `;
 
@@ -706,7 +792,7 @@ app.put("/admin/products/:id", (req, res) => {
       MaThuongHieu,
       DonGia,
       MoTa || "",
-      Number(KhuyenMai),
+      MaKhuyenMai || null,
       id,
     ],
     (err) => {
@@ -715,9 +801,36 @@ app.put("/admin/products/:id", (req, res) => {
         return res.status(500).json(err);
       }
 
-      return res.json({ status: "Success" });
+      return res.json({
+        status: "Success",
+        message: "Cập nhật sản phẩm thành công",
+      });
     },
   );
+});
+
+// api lấy danh sách khuyến mãi
+app.get("/admin/promotions", (req, res) => {
+  const sql = `
+    SELECT
+      MaKhuyenMai,
+      TenKhuyenMai,
+      LoaiGiamGia,
+      GiaTriGiam,
+      NgayBatDau,
+      NgayKetThuc,
+      TrangThai
+    FROM khuyenmai
+    ORDER BY TenKhuyenMai ASC
+  `;
+
+  db.query(sql, (err, data) => {
+    if (err) {
+      return res.status(500).json(err);
+    }
+
+    return res.json(data);
+  });
 });
 
 // api bien the san pham cua admin
@@ -1494,7 +1607,7 @@ app.post("/checkout", async (req, res) => {
   const paymentStatus = "ChuaThanhToan";
 
   try {
-    // 2. Thêm địa chỉ giao hàng
+    // Them dchi giao hang
     await db.promise().query(
       `
       INSERT INTO diachi (
@@ -1521,7 +1634,7 @@ app.post("/checkout", async (req, res) => {
       ]
     );
 
-    // 3. Tạo đơn hàng
+    // tao don hang
     await db.promise().query(
       `
       INSERT INTO donhang (
@@ -1542,7 +1655,7 @@ app.post("/checkout", async (req, res) => {
       ]
     );
 
-    // 4. Thêm chi tiết đơn hàng
+    // them chi tiet don hang
     const detailValues = items.map((item) => [
       crypto.randomUUID(),
       MaDonHang,
@@ -1565,7 +1678,7 @@ app.post("/checkout", async (req, res) => {
       [detailValues]
     );
 
-    // 5. Tạo thông tin thanh toán
+    // thong tin thanh toan
     await db.promise().query(
       `
       INSERT INTO thanhtoan (
@@ -1586,7 +1699,6 @@ app.post("/checkout", async (req, res) => {
       ]
     );
 
-    // 6. Nếu thanh toán MoMo thì chưa xóa giỏ hàng
     if (PhuongThucThanhToan === "BANK") {
       return res.json({
         status: "Success",
@@ -1596,7 +1708,6 @@ app.post("/checkout", async (req, res) => {
       });
     }
 
-    // 7. Nếu COD thì xóa sản phẩm đã đặt khỏi giỏ
     const cartDetailIds = items
       .map((item) => item.MaGioHangChiTiet)
       .filter(Boolean);

@@ -13,8 +13,8 @@ function ProductAdmin() {
   const [brands, setBrands] = useState([]);
   const [colors, setColors] = useState([]);
   const [sizes, setSizes] = useState([]);
+  const [promotions, setPromotions] = useState([]);
   const [search, setSearch] = useState("");
-
 
   const [values, setValues] = useState({
     TenSanPham: "",
@@ -36,7 +36,7 @@ function ProductAdmin() {
     MaThuongHieu: "",
     DonGia: "",
     MoTa: "",
-    KhuyenMai: 0,
+    KhuyenMai: "",
   });
 
   const [currentProductId, setCurrentProductId] = useState("");
@@ -48,7 +48,6 @@ function ProductAdmin() {
       .then(() => window.location.reload(true))
       .catch((err) => console.log(err));
   };
-
 
   const fetchProducts = async () => {
     try {
@@ -77,11 +76,12 @@ function ProductAdmin() {
     axios
       .get("http://localhost:5000/admin/sizes")
       .then((res) => setSizes(res.data));
-  }, []);
 
-  const calcDiscountPrice = (price, discount) => {
-    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
-  };
+    axios
+      .get("http://localhost:5000/admin/promotions")
+      .then((res) => setPromotions(res.data))
+      .catch((err) => console.log(err));
+  }, []);
 
   const handleChange = (e) => {
     setValues({ ...values, [e.target.name]: e.target.value });
@@ -185,7 +185,7 @@ function ProductAdmin() {
       MaThuongHieu: item.MaThuongHieu || "",
       DonGia: item.DonGia,
       MoTa: item.MoTa || "",
-      KhuyenMai: item.KhuyenMai || 0,
+      KhuyenMai: item.KhuyenMai || "",
     });
   };
 
@@ -201,11 +201,6 @@ function ProductAdmin() {
 
     if (Number(editValues.DonGia) <= 0) {
       alert("Đơn giá phải lớn hơn 0");
-      return;
-    }
-
-    if (![0, 10, 20, 50].includes(Number(editValues.KhuyenMai))) {
-      alert("Khuyến mãi chỉ được chọn 0%, 10%, 20% hoặc 50%");
       return;
     }
 
@@ -597,14 +592,17 @@ function ProductAdmin() {
             />
 
             <select
-              name="KhuyenMai"
-              value={editValues.KhuyenMai}
+              name="MaKhuyenMai"
+              value={editValues.MaKhuyenMai}
               onChange={handleEditChange}
             >
-              <option value="0">Không khuyến mãi</option>
-              <option value="10">Giảm 10%</option>
-              <option value="20">Giảm 20%</option>
-              <option value="50">Giảm 50%</option>
+              <option value="">Không khuyến mãi</option>
+
+              {promotions.map((item) => (
+                <option key={item.MaKhuyenMai} value={item.MaKhuyenMai}>
+                  {item.TenKhuyenMai}
+                </option>
+              ))}
             </select>
 
             <textarea
@@ -613,17 +611,6 @@ function ProductAdmin() {
               value={editValues.MoTa}
               onChange={handleEditChange}
             />
-
-            <div className="discount-preview">
-              Giá sau khuyến mãi:{" "}
-              <strong>
-                {calcDiscountPrice(
-                  editValues.DonGia || 0,
-                  editValues.KhuyenMai || 0,
-                ).toLocaleString()}
-                đ
-              </strong>
-            </div>
 
             <button type="submit" className="admin-submit-btn">
               Lưu cập nhật
@@ -731,8 +718,8 @@ function ProductAdmin() {
               <th>Màu</th>
               <th>Size</th>
               <th>Giá gốc</th>
-              <th>KM</th>
-              <th>Giá sau giảm</th>
+              <th>Khuyến mãi</th>
+              <th>Giá bán</th>
               <th>Mô tả</th>
               <th>Tổng SL</th>
               <th>Trạng thái</th>
@@ -759,12 +746,10 @@ function ProductAdmin() {
                 <td>{item.DanhSachMau}</td>
                 <td>{item.DanhSachSize}</td>
                 <td>{Number(item.DonGia).toLocaleString()}đ</td>
-                <td>{item.KhuyenMai || 0}%</td>
+                <td>{item.TenKhuyenMai || "Không"}</td>
+
                 <td>
-                  {calcDiscountPrice(
-                    item.DonGia || 0,
-                    item.KhuyenMai || 0,
-                  ).toLocaleString()}
+                  {Number(item.GiaSauKhuyenMai ?? item.DonGia).toLocaleString()}
                   đ
                 </td>
                 <td>{item.MoTa}</td>
