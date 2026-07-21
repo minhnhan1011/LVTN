@@ -9,7 +9,6 @@ function UserProfile() {
 
   const [userData, setUserData] = useState({
     HoTen: "",
-    Email: "",
     SoDienThoai: "",
     MatKhau: "",
   });
@@ -58,7 +57,6 @@ function UserProfile() {
 
     if (
       userData.HoTen.trim() === "" ||
-      userData.Email.trim() === "" ||
       userData.MatKhau.trim() === ""
     ) {
       alert("Vui lòng nhập đầy đủ thông tin");
@@ -100,16 +98,6 @@ function UserProfile() {
               type="text"
               name="HoTen"
               value={userData.HoTen}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="profile-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="Email"
-              value={userData.Email}
               onChange={handleChange}
             />
           </div>

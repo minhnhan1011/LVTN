@@ -428,7 +428,6 @@ app.put("/users/:id", (req, res) => {
   const sql = `
     UPDATE nguoidung
     SET HoTen = ?,
-        Email = ?,
         SoDienThoai = ?,
         MatKhau = ?
     WHERE MaNguoiDung = ?
@@ -436,7 +435,7 @@ app.put("/users/:id", (req, res) => {
 
   db.query(
     sql,
-    [HoTen, Email, SoDienThoai, MatKhau, id],
+    [HoTen, SoDienThoai, MatKhau, id],
     (err, result) => {
       if (err) {
         console.log(err);
@@ -943,7 +942,7 @@ app.get("/products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.DonGia,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       sp.MoTa,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
@@ -965,7 +964,7 @@ app.get("/products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.DonGia,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       sp.MoTa,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
@@ -990,7 +989,7 @@ app.get("/product/:id", (req, res) => {
     sp.MaSanPham,
     sp.TenSanPham,
     sp.DonGia,
-    sp.KhuyenMai,
+    sp.MaKhuyenMai,
     sp.MoTa,
     lsp.TenLoaiSanPham,
     th.TenThuongHieu,
@@ -1262,7 +1261,7 @@ app.get("/home/new-products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.DonGia,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
@@ -1286,7 +1285,7 @@ app.get("/home/nike-products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.DonGia,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
@@ -1311,7 +1310,7 @@ app.get("/home/adidas-products", (req, res) => {
       sp.MaSanPham,
       sp.TenSanPham,
       sp.DonGia,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
@@ -1372,8 +1371,8 @@ app.post("/cart", (req, res) => {
           const sqlPrice = `
   SELECT 
     sp.DonGia,
-    sp.KhuyenMai,
-    (sp.DonGia - (sp.DonGia * IFNULL(sp.KhuyenMai, 0) / 100)) AS GiaSauGiam
+    sp.MaKhuyenMai,
+    (sp.DonGia - (sp.DonGia * IFNULL(sp.MaKhuyenMai, 0) / 100)) AS GiaSauGiam
   FROM sanpham_bienthe bt
   JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
   WHERE bt.MaBienThe = ?
@@ -1440,7 +1439,7 @@ app.get("/cart/:MaNguoiDung", (req, res) => {
       ghct.DonGia,
       bt.SoLuong AS SoLuongTonKho,
       sp.DonGia AS DonGiaGoc,
-      sp.KhuyenMai,
+      sp.MaKhuyenMai,
       sp.TenSanPham,
       sp.MaSanPham,
       ms.TenMauSac,

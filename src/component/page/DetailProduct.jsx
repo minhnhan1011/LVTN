@@ -79,7 +79,11 @@ function DetailProduct() {
   ];
 
   const uniqueSizes = [
-    ...new Set(product.variants?.map((variant) => variant.TenSize)),
+    ...new Set(
+      product.variants?.filter(
+        (variant) => variant.TenMauSac === selectedColor,
+      ).map((variant) => variant.TenSize),
+    )
   ];
 
   const selectedVariant = product.variants?.find(
