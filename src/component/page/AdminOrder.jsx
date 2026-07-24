@@ -65,9 +65,7 @@ function AdminOrder() {
       fetchOrders();
     } catch (err) {
       console.log(err);
-      alert(
-        err.response?.data?.message || "Tạo đơn hàng thất bại",
-      );
+      alert(err.response?.data?.message || "Tạo đơn hàng thất bại");
     }
   };
 
@@ -83,10 +81,7 @@ function AdminOrder() {
       fetchOrders();
     } catch (err) {
       console.log(err);
-      alert(
-        err.response?.data?.message ||
-          "Cập nhật trạng thái thất bại",
-      );
+      alert(err.response?.data?.message || "Cập nhật trạng thái thất bại");
     }
   };
 
@@ -106,10 +101,7 @@ function AdminOrder() {
     } catch (err) {
       console.log("Lỗi lấy chi tiết đơn hàng:", err);
 
-      alert(
-        err.response?.data?.message ||
-          "Không thể lấy chi tiết đơn hàng",
-      );
+      alert(err.response?.data?.message || "Không thể lấy chi tiết đơn hàng");
 
       setShowDetail(false);
     } finally {
@@ -158,9 +150,7 @@ function AdminOrder() {
           <div>
             <h1>Quản lý đơn hàng</h1>
 
-            <p>
-              Theo dõi trạng thái và quản lý đơn hàng khách hàng.
-            </p>
+            <p>Theo dõi trạng thái và quản lý đơn hàng khách hàng.</p>
           </div>
         </section>
 
@@ -205,9 +195,7 @@ function AdminOrder() {
                   <tr
                     key={order.MaDonHang}
                     className="order-row"
-                    onClick={() =>
-                      handleViewOrderDetail(order.MaDonHang)
-                    }
+                    onClick={() => handleViewOrderDetail(order.MaDonHang)}
                   >
                     <td>
                       #DH
@@ -228,9 +216,7 @@ function AdminOrder() {
                       </span>
                     </td>
 
-                    <td>
-                      {Number(order.TongTien).toLocaleString()}đ
-                    </td>
+                    <td>{Number(order.TongTien).toLocaleString()}đ</td>
 
                     <td>
                       {order.TrangThai === "ChoXacNhan" ? (
@@ -260,23 +246,15 @@ function AdminOrder() {
                           onChange={(e) => {
                             e.stopPropagation();
 
-                            handleChangeStatus(
-                              order.MaDonHang,
-                              e.target.value,
-                            );
+                            handleChangeStatus(order.MaDonHang, e.target.value);
                           }}
                         >
-                          <option value="DaXacNhan">
-                            Đã xác nhận
-                          </option>
+                          <option value="DaXacNhan">Đã xác nhận</option>
 
-                          <option value="DangGiao">
-                            Đang giao
-                          </option>
+                          <option value="DangGiao">Đang giao</option>
 
-                          <option value="HoanThanh">
-                            Hoàn thành
-                          </option>
+                          <option value="HoanThanh">Hoàn thành</option>
+                          <option value="DaHuy">Hủy đơn</option>
                         </select>
                       )}
                     </td>
@@ -294,10 +272,7 @@ function AdminOrder() {
         </section>
 
         {showDetail && (
-          <div
-            className="order-detail-overlay"
-            onClick={handleCloseDetail}
-          >
+          <div className="order-detail-overlay" onClick={handleCloseDetail}>
             <div
               className="order-detail-modal"
               onClick={(e) => e.stopPropagation()}
@@ -312,8 +287,7 @@ function AdminOrder() {
                       <strong>
                         #DH
                         {String(
-                          selectedOrder.SoDonHang ||
-                            selectedOrder.MaDonHang,
+                          selectedOrder.SoDonHang || selectedOrder.MaDonHang,
                         ).padStart(4, "0")}
                       </strong>
                     </p>
@@ -345,17 +319,14 @@ function AdminOrder() {
                       <span>Số điện thoại</span>
 
                       <strong>
-                        {selectedOrder.SoDienThoai ||
-                          "Chưa cập nhật"}
+                        {selectedOrder.SoDienThoai || "Chưa cập nhật"}
                       </strong>
                     </div>
 
                     <div className="customer-info-item">
                       <span>Phương thức thanh toán</span>
 
-                      <strong>
-                        {selectedOrder.PhuongThucThanhToan}
-                      </strong>
+                      <strong>{selectedOrder.PhuongThucThanhToan}</strong>
                     </div>
 
                     <div className="customer-info-item">
@@ -366,9 +337,7 @@ function AdminOrder() {
                           selectedOrder.TrangThai,
                         )}`}
                       >
-                        {convertStatus(
-                          selectedOrder.TrangThai,
-                        )}
+                        {convertStatus(selectedOrder.TrangThai)}
                       </span>
                     </div>
 
@@ -394,9 +363,7 @@ function AdminOrder() {
                   <div className="order-product-title">
                     <h3>Danh sách sản phẩm</h3>
 
-                    <span>
-                      {orderDetails.length} sản phẩm
-                    </span>
+                    <span>{orderDetails.length} sản phẩm</span>
                   </div>
 
                   <div className="order-detail-table-box">
@@ -417,9 +384,7 @@ function AdminOrder() {
                           orderDetails.map((item, index) => (
                             <tr
                               key={
-                                item.MaChiTietDonHang ||
-                                item.MaBienThe ||
-                                index
+                                item.MaChiTietDonHang || item.MaBienThe || index
                               }
                             >
                               <td>
@@ -431,25 +396,16 @@ function AdminOrder() {
                                     />
                                   )}
 
-                                  <span>
-                                    {item.TenSanPham}
-                                  </span>
+                                  <span>{item.TenSanPham}</span>
                                 </div>
                               </td>
 
-                              <td>
-                                {item.TenMauSac || "Không có"}
-                              </td>
+                              <td>{item.TenMauSac || "Không có"}</td>
+
+                              <td>{item.TenSize || "Không có"}</td>
 
                               <td>
-                                {item.TenSize || "Không có"}
-                              </td>
-
-                              <td>
-                                {Number(
-                                  item.DonGia || 0,
-                                ).toLocaleString()}
-                                đ
+                                {Number(item.DonGia || 0).toLocaleString()}đ
                               </td>
 
                               <td>{item.SoLuong}</td>
@@ -465,10 +421,7 @@ function AdminOrder() {
                           ))
                         ) : (
                           <tr>
-                            <td
-                              colSpan="6"
-                              className="empty-order-detail"
-                            >
+                            <td colSpan="6" className="empty-order-detail">
                               Đơn hàng chưa có sản phẩm
                             </td>
                           </tr>
@@ -483,8 +436,7 @@ function AdminOrder() {
 
                       <strong>
                         {orderDetails.reduce(
-                          (total, item) =>
-                            total + Number(item.SoLuong || 0),
+                          (total, item) => total + Number(item.SoLuong || 0),
                           0,
                         )}
                       </strong>
@@ -494,10 +446,7 @@ function AdminOrder() {
                       <span>Tổng tiền</span>
 
                       <strong>
-                        {Number(
-                          selectedOrder.TongTien || 0,
-                        ).toLocaleString()}
-                        đ
+                        {Number(selectedOrder.TongTien || 0).toLocaleString()}đ
                       </strong>
                     </div>
                   </div>

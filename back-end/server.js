@@ -1830,17 +1830,34 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
   const { MaDonHang } = req.params;
   const { TrangThai } = req.body;
 
+  const allowedStatus = [
+    "ChoXacNhan",
+    "DaXacNhan",
+    "DangGiao",
+    "HoanThanh",
+    "DaHuy",
+  ];
+
+  if (!allowedStatus.includes(TrangThai)) {
+    return res.status(400).json({
+      message: "Trạng thái không hợp lệ",
+    });
+  }
+
   const sqlGetOrder = `
     SELECT 
       dh.TrangThai,
       tt.PhuongThucThanhToan
     FROM donhang dh
-    LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
+    LEFT JOIN thanhtoan tt 
+      ON dh.MaDonHang = tt.MaDonHang
     WHERE dh.MaDonHang = ?
   `;
 
   db.query(sqlGetOrder, [MaDonHang], (err, data) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      return res.status(500).json(err);
+    }
 
     if (data.length === 0) {
       return res.status(404).json({
@@ -1851,6 +1868,12 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
     const oldStatus = data[0].TrangThai;
     const paymentMethod = data[0].PhuongThucThanhToan;
 
+    if (oldStatus === TrangThai) {
+      return res.status(400).json({
+        message: "Đơn hàng đã ở trạng thái này",
+      });
+    }
+
     const sqlUpdateOrder = `
       UPDATE donhang
       SET TrangThai = ?
@@ -1858,14 +1881,17 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
     `;
 
     db.query(sqlUpdateOrder, [TrangThai, MaDonHang], (err2) => {
-      if (err2) return res.status(500).json(err2);
+      if (err2) {
+        return res.status(500).json(err2);
+      }
 
+      // COD: Admin xác nhận đơn thì mới trừ kho
       if (
         oldStatus === "ChoXacNhan" &&
         TrangThai === "DaXacNhan" &&
         paymentMethod === "COD"
       ) {
-        const sqlUpdateStock = `
+        const sqlSubtractStock = `
           UPDATE sanpham_bienthe bt
           JOIN donhangchitiet dhct
             ON bt.MaBienThe = dhct.MaBienThe
@@ -1873,20 +1899,51 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
           WHERE dhct.MaDonHang = ?
         `;
 
-        db.query(sqlUpdateStock, [MaDonHang], (err3) => {
-          if (err3) return res.status(500).json(err3);
+        db.query(sqlSubtractStock, [MaDonHang], (err3) => {
+          if (err3) {
+            return res.status(500).json(err3);
+          }
 
           return res.json({
             status: "Success",
-            message: "Đã cập nhật trạng thái và trừ kho COD",
+            message: "Đã xác nhận đơn hàng và trừ kho COD",
           });
         });
-      } else {
-        return res.json({
-          status: "Success",
-          message: "Đã cập nhật trạng thái",
-        });
+
+        return;
       }
+
+      // Đơn đã được trừ kho nhưng sau đó bị hủy thì cộng lại kho
+      if (
+        TrangThai === "DaHuy" &&
+        ["DaXacNhan", "DangGiao"].includes(oldStatus)
+      ) {
+        const sqlRestoreStock = `
+          UPDATE sanpham_bienthe bt
+          JOIN donhangchitiet dhct
+            ON bt.MaBienThe = dhct.MaBienThe
+          SET bt.SoLuong = bt.SoLuong + dhct.SoLuong
+          WHERE dhct.MaDonHang = ?
+        `;
+
+        db.query(sqlRestoreStock, [MaDonHang], (err3) => {
+          if (err3) {
+            return res.status(500).json(err3);
+          }
+
+          return res.json({
+            status: "Success",
+            message: "Đã hủy đơn hàng và hoàn lại số lượng tồn kho",
+          });
+        });
+
+        return;
+      }
+
+      return res.json({
+        status: "Success",
+        message: "Đã cập nhật trạng thái",
+      });
     });
   });
 });
