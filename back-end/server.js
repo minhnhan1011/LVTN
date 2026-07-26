@@ -935,6 +935,20 @@ app.delete("/admin/variants/:MaBienThe", (req, res) => {
   });
 });
 
+// api trang thai san pham cua admin
+app.put("/admin/products/:id/show", (req, res) => {
+  const sql = `
+    UPDATE sanpham
+    SET TrangThai = 'DangBan'
+    WHERE MaSanPham = ?
+  `;
+
+  db.query(sql, [req.params.id], (err) => {
+    if (err) return res.status(500).json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
 //api ben trang san pham
 app.get("/products", (req, res) => {
   const sql = `
@@ -1240,19 +1254,7 @@ app.delete("/comments/:MaBinhLuan", (req, res) => {
   });
 });
 
-// api trang thai san pham cua admin
-app.put("/admin/products/:id/show", (req, res) => {
-  const sql = `
-    UPDATE sanpham
-    SET TrangThai = 'DangBan'
-    WHERE MaSanPham = ?
-  `;
 
-  db.query(sql, [req.params.id], (err) => {
-    if (err) return res.status(500).json(err);
-    return res.json({ status: "Success" });
-  });
-});
 
 // api xem danh sách sản phẩm ở trang chủ
 app.get("/home/new-products", (req, res) => {
