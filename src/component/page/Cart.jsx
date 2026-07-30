@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from "react";
 import Header from "../header/Header";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "../asset/Cart.css";
 
 function Cart() {
+  const navigate = useNavigate();
+
   const [cart, setCart] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
 
   const MaNguoiDung = localStorage.getItem("MaNguoiDung");
 
+  const getCartItemId = (item) => {
+    return item.MaGioHangChiTiet || item.MaBienThe;
+  };
+
   const fetchCart = () => {
     if (!MaNguoiDung) {
-      const guestCart = JSON.parse(localStorage.getItem("guestCart")) || [];
+      const guestCart = JSON.parse(localStorage.getItem("guestCart") || "[]");
+
+
+      
       setCart(guestCart);
       setSelectedItems([]);
       return;
@@ -23,7 +33,9 @@ function Cart() {
         setCart(res.data);
         setSelectedItems([]);
       })
-      .catch((err) => console.log(err));
+      .catch((err) => {
+        console.log(err.response?.data || err);
+      });
   };
 
   useEffect(() => {
@@ -32,7 +44,7 @@ function Cart() {
 
   const handleCheckItem = (id) => {
     if (selectedItems.includes(id)) {
-      setSelectedItems(selectedItems.filter((item) => item !== id));
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
     } else {
       setSelectedItems([...selectedItems, id]);
     }
@@ -42,25 +54,35 @@ function Cart() {
     if (selectedItems.length === cart.length) {
       setSelectedItems([]);
     } else {
-      setSelectedItems(cart.map((item) => item.MaGioHangChiTiet));
+      setSelectedItems(cart.map((item) => getCartItemId(item)));
     }
   };
 
   const updateGuestCart = (newCart) => {
     localStorage.setItem("guestCart", JSON.stringify(newCart));
+
     setCart(newCart);
   };
 
   const handleQuantity = async (item, type) => {
     let newQuantity = Number(item.SoLuong);
-    const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 999999);
+
+    const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 0);
 
     if (type === "minus") {
-      if (newQuantity <= 1) return;
+      if (newQuantity <= 1) {
+        return;
+      }
+
       newQuantity -= 1;
     }
 
     if (type === "plus") {
+      if (stock <= 0) {
+        alert("Sản phẩm hiện đã hết hàng");
+        return;
+      }
+
       if (newQuantity + 1 > stock) {
         alert(`Trong kho chỉ còn ${stock} sản phẩm`);
         return;
@@ -71,9 +93,12 @@ function Cart() {
 
     if (!MaNguoiDung) {
       const newCart = cart.map((cartItem) =>
-        cartItem.MaGioHangChiTiet === item.MaGioHangChiTiet
-          ? { ...cartItem, SoLuong: newQuantity }
-          : cartItem
+        cartItem.MaBienThe === item.MaBienThe
+          ? {
+              ...cartItem,
+              SoLuong: newQuantity,
+            }
+          : cartItem,
       );
 
       updateGuestCart(newCart);
@@ -85,26 +110,32 @@ function Cart() {
         `http://localhost:5000/cart/detail/${item.MaGioHangChiTiet}`,
         {
           SoLuong: newQuantity,
-        }
+        },
       );
 
       fetchCart();
     } catch (err) {
       console.log(err.response?.data || err);
-      alert("Cập nhật số lượng thất bại");
+
+      alert(err.response?.data?.message || "Cập nhật số lượng thất bại");
     }
   };
 
   const handleDeleteCartItem = async (id) => {
-    if (!window.confirm("Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?")) {
+    const confirmDelete = window.confirm(
+      "Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?",
+    );
+
+    if (!confirmDelete) {
       return;
     }
 
     if (!MaNguoiDung) {
-      const newCart = cart.filter((item) => item.MaGioHangChiTiet !== id);
+      const newCart = cart.filter((item) => getCartItemId(item) !== id);
 
       updateGuestCart(newCart);
-      setSelectedItems(selectedItems.filter((item) => item !== id));
+
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
 
       alert("Đã xóa khỏi giỏ hàng");
       return;
@@ -113,18 +144,20 @@ function Cart() {
     try {
       await axios.delete(`http://localhost:5000/cart/detail/${id}`);
 
-      setSelectedItems(selectedItems.filter((item) => item !== id));
+      setSelectedItems(selectedItems.filter((itemId) => itemId !== id));
+
       fetchCart();
 
       alert("Đã xóa khỏi giỏ hàng");
     } catch (err) {
       console.log(err.response?.data || err);
+
       alert(err.response?.data?.message || "Xóa sản phẩm thất bại");
     }
   };
 
   const selectedCart = cart.filter((item) =>
-    selectedItems.includes(item.MaGioHangChiTiet)
+    selectedItems.includes(getCartItemId(item)),
   );
 
   const total = selectedCart.reduce((sum, item) => {
@@ -132,31 +165,48 @@ function Cart() {
   }, 0);
 
   const handleCheckout = () => {
-  if (selectedCart.length === 0) {
-    alert("Vui lòng chọn sản phẩm cần mua");
-    return;
-  }
-
-  for (const item of selectedCart) {
-    const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 0);
-
-    if (stock <= 0) {
-      alert(`${item.TenSanPham} hiện đã hết hàng`);
+    // Kiểm tra người dùng đã chọn sản phẩm chưa
+    if (selectedCart.length === 0) {
+      alert("Vui lòng chọn sản phẩm cần mua");
       return;
     }
 
-    if (Number(item.SoLuong) > stock) {
-      alert(
-        `${item.TenSanPham} chỉ còn ${stock} sản phẩm trong kho. Vui lòng giảm số lượng.`
-      );
+    // Kiểm tra tồn kho
+    for (const item of selectedCart) {
+      const stock = Number(item.SoLuongTonKho ?? item.SoLuongKho ?? 0);
+
+      if (stock <= 0) {
+        alert(`${item.TenSanPham} hiện đã hết hàng`);
+        return;
+      }
+
+      if (Number(item.SoLuong) > stock) {
+        alert(
+          `${item.TenSanPham} chỉ còn ${stock} sản phẩm trong kho. Vui lòng giảm số lượng.`,
+        );
+        return;
+      }
+    }
+
+    // Lưu sản phẩm người dùng đã chọn
+    localStorage.setItem("checkoutItems", JSON.stringify(selectedCart));
+
+    const currentUserId = localStorage.getItem("MaNguoiDung");
+
+    // Chưa đăng nhập thì chuyển sang login
+    if (!currentUserId) {
+      navigate("/login", {
+        state: {
+          redirectTo: "/cart",
+        },
+      });
+
       return;
     }
-  }
 
-  localStorage.setItem("checkoutItems", JSON.stringify(selectedCart));
-
-  window.location.href = "/checkout";
-};
+    // Đã đăng nhập thì sang checkout
+    navigate("/checkout");
+  };
 
   return (
     <>
@@ -183,74 +233,82 @@ function Cart() {
                 </label>
               </div>
 
-              {cart.map((item) => (
-                <div className="cart-item" key={item.MaGioHangChiTiet}>
-                  <input
-                    type="checkbox"
-                    className="cart-checkbox"
-                    checked={selectedItems.includes(item.MaGioHangChiTiet)}
-                    onChange={() => handleCheckItem(item.MaGioHangChiTiet)}
-                  />
+              {cart.map((item) => {
+                const itemId = getCartItemId(item);
 
-                  <img
-                    src={
-                      item.DuongDan
-                        ? `http://localhost:5000${item.DuongDan}`
-                        : "/no-image.png"
-                    }
-                    alt={item.TenSanPham}
-                  />
+                return (
+                  <div className="cart-item" key={itemId}>
+                    <input
+                      type="checkbox"
+                      className="cart-checkbox"
+                      checked={selectedItems.includes(itemId)}
+                      onChange={() => handleCheckItem(itemId)}
+                    />
 
-                  <div className="cart-info">
-                    <h3>{item.TenSanPham}</h3>
-                    <p>Màu: {item.TenMauSac}</p>
-                    <p>Size: {item.TenSize}</p>
+                    <img
+                      src={
+                        item.DuongDan
+                          ? `http://localhost:5000${item.DuongDan}`
+                          : "/no-image.png"
+                      }
+                      alt={item.TenSanPham}
+                    />
 
-                    {item.SoLuongTonKho !== undefined && (
-                      <p>Còn lại: {item.SoLuongTonKho} sản phẩm</p>
-                    )}
+                    <div className="cart-info">
+                      <h3>{item.TenSanPham}</h3>
 
-                    {Number(item.KhuyenMai) > 0 && (
-                      <p className="cart-sale-text">Giảm {item.KhuyenMai}%</p>
-                    )}
+                      <p>Màu: {item.TenMauSac}</p>
 
-                    <div className="cart-qty">
+                      <p>Size: {item.TenSize}</p>
+
+                      {(item.SoLuongTonKho !== undefined ||
+                        item.SoLuongKho !== undefined) && (
+                        <p>
+                          Còn lại: {item.SoLuongTonKho ?? item.SoLuongKho} sản
+                          phẩm
+                        </p>
+                      )}
+
+                      {Number(item.KhuyenMai) > 0 && (
+                        <p className="cart-sale-text">Giảm {item.KhuyenMai}%</p>
+                      )}
+
+                      <div className="cart-qty">
+                        <button
+                          type="button"
+                          onClick={() => handleQuantity(item, "minus")}
+                        >
+                          -
+                        </button>
+
+                        <span>{item.SoLuong}</span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleQuantity(item, "plus")}
+                        >
+                          +
+                        </button>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => handleQuantity(item, "minus")}
+                        className="cart-delete-btn"
+                        onClick={() => handleDeleteCartItem(itemId)}
                       >
-                        -
-                      </button>
-
-                      <span>{item.SoLuong}</span>
-
-                      <button
-                        type="button"
-                        onClick={() => handleQuantity(item, "plus")}
-                      >
-                        +
+                        Xóa
                       </button>
                     </div>
 
-                    <button
-                      type="button"
-                      className="cart-delete-btn"
-                      onClick={() =>
-                        handleDeleteCartItem(item.MaGioHangChiTiet)
-                      }
-                    >
-                      Xóa
-                    </button>
+                    <strong>
+                      {(
+                        Number(item.DonGia) * Number(item.SoLuong)
+                      ).toLocaleString()}
+                      đ
+                    </strong>
                   </div>
-
-                  <strong>
-                    {(
-                      Number(item.DonGia) * Number(item.SoLuong)
-                    ).toLocaleString()}
-                    đ
-                  </strong>
-                </div>
-              ))}
+                );
+              })}
             </section>
 
             <aside className="checkout-box">
@@ -258,21 +316,25 @@ function Cart() {
 
               <div className="checkout-row">
                 <span>Sản phẩm đã chọn</span>
+
                 <strong>{selectedCart.length}</strong>
               </div>
 
               <div className="checkout-row">
                 <span>Tạm tính</span>
+
                 <strong>{total.toLocaleString()}đ</strong>
               </div>
 
               <div className="checkout-row">
                 <span>Phí vận chuyển</span>
+
                 <strong>Miễn phí</strong>
               </div>
 
               <div className="checkout-total">
                 <span>Tổng cộng</span>
+
                 <strong>{total.toLocaleString()}đ</strong>
               </div>
 

@@ -1864,7 +1864,7 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
         return res.status(500).json(err2);
       }
 
-      // COD: Admin xác nhận đơn thì mới trừ kho
+      // admin xac nhan don hang, tru kho COD
       if (
         oldStatus === "ChoXacNhan" &&
         TrangThai === "DaXacNhan" &&
@@ -1892,7 +1892,7 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
         return;
       }
 
-      // Đơn đã được trừ kho nhưng sau đó bị hủy thì cộng lại kho
+      // don da tru kho roi, admin huy don thi phai hoan kho
       if (
         TrangThai === "DaHuy" &&
         ["DaXacNhan", "DangGiao"].includes(oldStatus)
