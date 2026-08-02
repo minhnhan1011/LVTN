@@ -11,6 +11,7 @@ function UserProfile() {
     HoTen: "",
     SoDienThoai: "",
     MatKhau: "",
+    // XacNhanMatKhau: "",
   });
 
   const [loading, setLoading] = useState(true);
@@ -62,6 +63,13 @@ function UserProfile() {
       alert("Vui lòng nhập đầy đủ thông tin");
       return;
     }
+
+    // if (
+    //   userData.MatKhau != userData.XacNhanMatKhau
+    // ){
+    //   alert("Nhap dung mat khau da nhap");
+    //   return;
+    // }
 
     try {
       const res = await axios.put(

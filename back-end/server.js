@@ -423,7 +423,7 @@ app.get("/users/:id", (req, res) => {
 
 app.put("/users/:id", (req, res) => {
   const { id } = req.params;
-  const { HoTen, Email, SoDienThoai, MatKhau } = req.body;
+  const { HoTen, SoDienThoai, MatKhau } = req.body;
 
   const sql = `
     UPDATE nguoidung
