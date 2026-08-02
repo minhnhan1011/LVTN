@@ -1,15 +1,21 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import {
+  useLocation,
+  useNavigate,
+  Link,
+} from "react-router-dom";
 import axios from "axios";
 import "../asset/Login.css";
 import { GoogleLogin } from "@react-oauth/google";
-import { Link } from "react-router-dom";
 
 function Login() {
   const [formData, setFormData] = useState({
     username: "",
     password: "",
   });
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e) => {
     setFormData({
@@ -18,44 +24,106 @@ function Login() {
     });
   };
 
-  const navigate = useNavigate();
+  // Đồng bộ giỏ hàng khách vào database
+  const syncGuestCart = async (MaNguoiDung) => {
+    const guestCart = JSON.parse(
+      localStorage.getItem("guestCart") || "[]",
+    );
 
-  const handleLogin = (e) => {
-    e.preventDefault();
+    if (guestCart.length === 0) {
+      return;
+    }
 
-    axios
-      .post("http://localhost:5000/login", formData, {
-        withCredentials: true,
-      })
-      .then((res) => {
-        if (res.data.status === "Success") {
-          const vaitro = res.data.user.VaiTro;
-
-          localStorage.setItem("VaiTro", vaitro);
-
-          alert("Đăng nhập thành công");
-
-          if (vaitro === "Admin") {
-            navigate("/admin");
-          } else {
-            navigate("/");
-          }
-        } else {
-          alert(res.data.message || "Tài khoản hoặc mật khẩu không đúng");
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-
-        if (err.response?.status === 403) {
-          alert(err.response.data.message);
-        } else {
-          alert("Có lỗi xảy ra trong quá trình đăng nhập.");
-        }
+    for (const item of guestCart) {
+      await axios.post("http://localhost:5000/cart", {
+        MaNguoiDung: MaNguoiDung,
+        MaBienThe: item.MaBienThe,
+        SoLuong: Number(item.SoLuong),
       });
+    }
+
+    // Chỉ xóa sau khi đồng bộ thành công
+    localStorage.removeItem("guestCart");
   };
 
-  const handleGoogleLoginSuccess = async (credentialResponse) => {
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await axios.post(
+        "http://localhost:5000/login",
+        formData,
+        {
+          withCredentials: true,
+        },
+      );
+
+      if (res.data.status !== "Success") {
+        alert(
+          res.data.message ||
+            "Tài khoản hoặc mật khẩu không đúng",
+        );
+        return;
+      }
+
+      const user = res.data.user;
+      const vaitro = user.VaiTro;
+      const MaNguoiDung = user.MaNguoiDung;
+
+      // Lưu thông tin người dùng
+      localStorage.setItem("VaiTro", vaitro);
+      localStorage.setItem(
+        "MaNguoiDung",
+        String(MaNguoiDung),
+      );
+
+      // Admin không cần đồng bộ giỏ hàng
+      if (vaitro === "Admin") {
+        alert("Đăng nhập thành công");
+        navigate("/admin");
+        return;
+      }
+
+      try {
+        await syncGuestCart(MaNguoiDung);
+      } catch (syncError) {
+        console.error(
+          "Lỗi đồng bộ giỏ hàng:",
+          syncError.response?.data || syncError,
+        );
+
+        alert(
+          syncError.response?.data?.message ||
+            "Đăng nhập thành công nhưng đồng bộ giỏ hàng thất bại",
+        );
+
+        return;
+      }
+
+      alert("Đăng nhập thành công");
+
+      // Nếu đi từ trang giỏ hàng sang login thì quay lại giỏ hàng
+      const redirectTo =
+        location.state?.redirectTo || "/";
+
+      navigate(redirectTo);
+    } catch (err) {
+      console.error(err);
+
+      if (err.response?.status === 403) {
+        alert(err.response.data.message);
+      } else {
+        alert(
+          err.response?.data?.message ||
+            "Có lỗi xảy ra trong quá trình đăng nhập.",
+        );
+      }
+    }
+  };
+
+  const handleGoogleLoginSuccess = async (
+    credentialResponse,
+  ) => {
     try {
       const res = await axios.post(
         "http://localhost:5000/google-login",
@@ -64,33 +132,72 @@ function Login() {
         },
         {
           withCredentials: true,
-        }
+        },
       );
 
-      if (res.data.status === "Success") {
-        const vaitro = res.data.user.VaiTro;
-
-        localStorage.setItem("VaiTro", vaitro);
-        alert("Đăng nhập Google thành công");
-
-        if (vaitro === "Admin") {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
-      } else {
+      if (res.data.status !== "Success") {
         alert("Đăng nhập Google thất bại");
+        return;
       }
+
+      const user = res.data.user;
+      const vaitro = user.VaiTro;
+      const MaNguoiDung = user.MaNguoiDung;
+
+      // Lưu thông tin người dùng
+      localStorage.setItem("VaiTro", vaitro);
+      localStorage.setItem(
+        "MaNguoiDung",
+        String(MaNguoiDung),
+      );
+
+      if (vaitro === "Admin") {
+        alert("Đăng nhập Google thành công");
+        navigate("/admin");
+        return;
+      }
+
+      try {
+        await syncGuestCart(MaNguoiDung);
+      } catch (syncError) {
+        console.error(
+          "Lỗi đồng bộ giỏ hàng:",
+          syncError.response?.data || syncError,
+        );
+
+        alert(
+          syncError.response?.data?.message ||
+            "Đăng nhập thành công nhưng đồng bộ giỏ hàng thất bại",
+        );
+
+        return;
+      }
+
+      alert("Đăng nhập Google thành công");
+
+      const redirectTo =
+        location.state?.redirectTo || "/";
+
+      navigate(redirectTo);
     } catch (error) {
       console.error(error);
-      alert("Có lỗi xảy ra trong quá trình đăng nhập.");
+
+      alert(
+        error.response?.data?.message ||
+          "Có lỗi xảy ra trong quá trình đăng nhập.",
+      );
     }
   };
 
   return (
     <div className="login-container">
-      <form className="login-form" onSubmit={handleLogin}>
-        <h1 className="logo-signin">ĐĂNG NHẬP</h1>
+      <form
+        className="login-form"
+        onSubmit={handleLogin}
+      >
+        <h1 className="logo-signin">
+          ĐĂNG NHẬP
+        </h1>
 
         <label>
           <input
@@ -112,16 +219,25 @@ function Login() {
           />
         </label>
 
-        <button type="submit">Đăng nhập</button>
+        <button type="submit">
+          Đăng nhập
+        </button>
 
         <hr />
+
         <div className="google-login-container">
-          <GoogleLogin onSuccess={handleGoogleLoginSuccess} onError={() => {
-            alert("Đăng nhập thất bại");
-          }} />
+          <GoogleLogin
+            onSuccess={handleGoogleLoginSuccess}
+            onError={() => {
+              alert("Đăng nhập thất bại");
+            }}
+          />
         </div>
 
-        <Link to="/signup" className="create-btn">
+        <Link
+          to="/signup"
+          className="create-btn"
+        >
           Tạo tài khoản mới
         </Link>
       </form>

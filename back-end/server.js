@@ -166,7 +166,7 @@ app.post("/login", (req, res) => {
           VaiTro: data[0].VaiTro,
         },
         "jwt-secret-key",
-        { expiresIn: "1h" }
+        { expiresIn: "1h" },
       );
 
       res.cookie("token", token, {
@@ -180,7 +180,7 @@ app.post("/login", (req, res) => {
         user: data[0],
         VaiTro: data[0].VaiTro,
       });
-    }
+    },
   );
 });
 
@@ -339,10 +339,10 @@ app.get("/admin/users", (req, res) => {
   `;
 
   db.query(sql, (err, data) => {
-    if (err){
+    if (err) {
       // console.log(err);
-      return res.status(500).json(err)
-    } ;
+      return res.status(500).json(err);
+    }
     return res.json(data);
   });
 });
@@ -433,39 +433,35 @@ app.put("/users/:id", (req, res) => {
     WHERE MaNguoiDung = ?
   `;
 
-  db.query(
-    sql,
-    [HoTen, SoDienThoai, MatKhau, id],
-    (err, result) => {
-      if (err) {
-        console.log(err);
+  db.query(sql, [HoTen, SoDienThoai, MatKhau, id], (err, result) => {
+    if (err) {
+      console.log(err);
 
-        if (err.code === "ER_DUP_ENTRY") {
-          return res.status(400).json({
-            status: "Fail",
-            message: "Email hoặc số điện thoại đã tồn tại",
-          });
-        }
-
-        return res.status(500).json({
-          status: "Error",
-          message: "Cập nhật thất bại",
-        });
-      }
-
-      if (result.affectedRows === 0) {
-        return res.status(404).json({
+      if (err.code === "ER_DUP_ENTRY") {
+        return res.status(400).json({
           status: "Fail",
-          message: "Không tìm thấy người dùng",
+          message: "Email hoặc số điện thoại đã tồn tại",
         });
       }
 
-      return res.json({
-        status: "Success",
-        message: "Cập nhật thông tin thành công",
+      return res.status(500).json({
+        status: "Error",
+        message: "Cập nhật thất bại",
       });
     }
-  );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({
+        status: "Fail",
+        message: "Không tìm thấy người dùng",
+      });
+    }
+
+    return res.json({
+      status: "Success",
+      message: "Cập nhật thông tin thành công",
+    });
+  });
 });
 
 // API quản lý sản phẩm
@@ -612,14 +608,8 @@ app.get("/admin/products", (req, res) => {
 });
 
 app.post("/admin/products", upload.single("HinhAnh"), (req, res) => {
-  const {
-    TenSanPham,
-    MaLoaiSanPham,
-    MaThuongHieu,
-    DonGia,
-    MoTa,
-    MaKhuyenMai,
-  } = req.body;
+  const { TenSanPham, MaLoaiSanPham, MaThuongHieu, DonGia, MoTa, MaKhuyenMai } =
+    req.body;
 
   if (!TenSanPham || !MaLoaiSanPham || !MaThuongHieu || !DonGia) {
     return res.status(400).json({
@@ -762,14 +752,8 @@ app.delete("/admin/products/:id", (req, res) => {
 app.put("/admin/products/:id", (req, res) => {
   const { id } = req.params;
 
-  const {
-    TenSanPham,
-    MaLoaiSanPham,
-    MaThuongHieu,
-    DonGia,
-    MoTa,
-    MaKhuyenMai,
-  } = req.body;
+  const { TenSanPham, MaLoaiSanPham, MaThuongHieu, DonGia, MoTa, MaKhuyenMai } =
+    req.body;
 
   const sql = `
     UPDATE sanpham
@@ -935,6 +919,20 @@ app.delete("/admin/variants/:MaBienThe", (req, res) => {
   });
 });
 
+// api trang thai san pham cua admin
+app.put("/admin/products/:id/show", (req, res) => {
+  const sql = `
+    UPDATE sanpham
+    SET TrangThai = 'DangBan'
+    WHERE MaSanPham = ?
+  `;
+
+  db.query(sql, [req.params.id], (err) => {
+    if (err) return res.status(500).json(err);
+    return res.json({ status: "Success" });
+  });
+});
+
 //api ben trang san pham
 app.get("/products", (req, res) => {
   const sql = `
@@ -969,6 +967,7 @@ app.get("/products", (req, res) => {
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
       ha.DuongDan
+      having sum(bt.SoLuong) > 0
     ORDER BY sp.MaSanPham DESC
   `;
 
@@ -1039,7 +1038,6 @@ app.get("/product/:id", (req, res) => {
   });
 });
 
-
 // api comment bên trang chi tiết sản phẩm
 app.get("/comments/:MaSanPham", (req, res) => {
   const { MaSanPham } = req.params;
@@ -1077,12 +1075,7 @@ app.get("/comments/:MaSanPham", (req, res) => {
 });
 
 app.post("/comments", (req, res) => {
-  const {
-    MaNguoiDung,
-    MaSanPham,
-    NoiDung,
-    MaBinhLuanGoc = null,
-  } = req.body;
+  const { MaNguoiDung, MaSanPham, NoiDung, MaBinhLuanGoc = null } = req.body;
 
   if (!MaNguoiDung || !MaSanPham) {
     return res.status(400).json({
@@ -1240,20 +1233,6 @@ app.delete("/comments/:MaBinhLuan", (req, res) => {
   });
 });
 
-// api trang thai san pham cua admin
-app.put("/admin/products/:id/show", (req, res) => {
-  const sql = `
-    UPDATE sanpham
-    SET TrangThai = 'DangBan'
-    WHERE MaSanPham = ?
-  `;
-
-  db.query(sql, [req.params.id], (err) => {
-    if (err) return res.status(500).json(err);
-    return res.json({ status: "Success" });
-  });
-});
-
 // api xem danh sách sản phẩm ở trang chủ
 app.get("/home/new-products", (req, res) => {
   const sql = `
@@ -1267,8 +1246,10 @@ app.get("/home/new-products", (req, res) => {
     FROM sanpham sp
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
     WHERE sp.TrangThai = 'DangBan'
     GROUP BY sp.MaSanPham
+    having sum(sl.SoLuong) > 0
     ORDER BY sp.MaSanPham DESC
     LIMIT 4
   `;
@@ -1291,9 +1272,11 @@ app.get("/home/nike-products", (req, res) => {
     FROM sanpham sp
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
     WHERE th.TenThuongHieu = 'Nike'
     AND sp.TrangThai = 'DangBan'
     GROUP BY sp.MaSanPham
+    having sum(sl.SoLuong) > 0
     ORDER BY sp.MaSanPham DESC
     LIMIT 8
   `;
@@ -1316,9 +1299,11 @@ app.get("/home/adidas-products", (req, res) => {
     FROM sanpham sp
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
     WHERE th.TenThuongHieu = 'Adidas'
     AND sp.TrangThai = 'DangBan'
     GROUP BY sp.MaSanPham
+    having sum(sl.SoLuong) > 0
     ORDER BY sp.MaSanPham DESC
     LIMIT 8
   `;
@@ -1630,7 +1615,7 @@ app.post("/checkout", async (req, res) => {
         Phuong,
         Quan,
         ThanhPho,
-      ]
+      ],
     );
 
     // tao don hang
@@ -1645,13 +1630,7 @@ app.post("/checkout", async (req, res) => {
       )
       VALUES (?, ?, ?, ?, ?)
       `,
-      [
-        MaDonHang,
-        MaNguoiDung,
-        MaDiaChi,
-        Number(TongTien),
-        orderStatus,
-      ]
+      [MaDonHang, MaNguoiDung, MaDiaChi, Number(TongTien), orderStatus],
     );
 
     // them chi tiet don hang
@@ -1674,7 +1653,7 @@ app.post("/checkout", async (req, res) => {
       )
       VALUES ?
       `,
-      [detailValues]
+      [detailValues],
     );
 
     // thong tin thanh toan
@@ -1695,7 +1674,7 @@ app.post("/checkout", async (req, res) => {
         PhuongThucThanhToan,
         Number(TongTien),
         paymentStatus,
-      ]
+      ],
     );
 
     if (PhuongThucThanhToan === "BANK") {
@@ -1717,7 +1696,7 @@ app.post("/checkout", async (req, res) => {
         DELETE FROM giohangchitiet
         WHERE MaGioHangChiTiet IN (?)
         `,
-        [cartDetailIds]
+        [cartDetailIds],
       );
     }
 
@@ -1830,17 +1809,34 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
   const { MaDonHang } = req.params;
   const { TrangThai } = req.body;
 
+  const allowedStatus = [
+    "ChoXacNhan",
+    "DaXacNhan",
+    "DangGiao",
+    "HoanThanh",
+    "DaHuy",
+  ];
+
+  if (!allowedStatus.includes(TrangThai)) {
+    return res.status(400).json({
+      message: "Trạng thái không hợp lệ",
+    });
+  }
+
   const sqlGetOrder = `
     SELECT 
       dh.TrangThai,
       tt.PhuongThucThanhToan
     FROM donhang dh
-    LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
+    LEFT JOIN thanhtoan tt 
+      ON dh.MaDonHang = tt.MaDonHang
     WHERE dh.MaDonHang = ?
   `;
 
   db.query(sqlGetOrder, [MaDonHang], (err, data) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      return res.status(500).json(err);
+    }
 
     if (data.length === 0) {
       return res.status(404).json({
@@ -1851,6 +1847,12 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
     const oldStatus = data[0].TrangThai;
     const paymentMethod = data[0].PhuongThucThanhToan;
 
+    if (oldStatus === TrangThai) {
+      return res.status(400).json({
+        message: "Đơn hàng đã ở trạng thái này",
+      });
+    }
+
     const sqlUpdateOrder = `
       UPDATE donhang
       SET TrangThai = ?
@@ -1858,14 +1860,17 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
     `;
 
     db.query(sqlUpdateOrder, [TrangThai, MaDonHang], (err2) => {
-      if (err2) return res.status(500).json(err2);
+      if (err2) {
+        return res.status(500).json(err2);
+      }
 
+      // admin xac nhan don hang, tru kho COD
       if (
         oldStatus === "ChoXacNhan" &&
         TrangThai === "DaXacNhan" &&
         paymentMethod === "COD"
       ) {
-        const sqlUpdateStock = `
+        const sqlSubtractStock = `
           UPDATE sanpham_bienthe bt
           JOIN donhangchitiet dhct
             ON bt.MaBienThe = dhct.MaBienThe
@@ -1873,20 +1878,51 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
           WHERE dhct.MaDonHang = ?
         `;
 
-        db.query(sqlUpdateStock, [MaDonHang], (err3) => {
-          if (err3) return res.status(500).json(err3);
+        db.query(sqlSubtractStock, [MaDonHang], (err3) => {
+          if (err3) {
+            return res.status(500).json(err3);
+          }
 
           return res.json({
             status: "Success",
-            message: "Đã cập nhật trạng thái và trừ kho COD",
+            message: "Đã xác nhận đơn hàng và trừ kho COD",
           });
         });
-      } else {
-        return res.json({
-          status: "Success",
-          message: "Đã cập nhật trạng thái",
-        });
+
+        return;
       }
+
+      // don da tru kho roi, admin huy don thi phai hoan kho
+      if (
+        TrangThai === "DaHuy" &&
+        ["DaXacNhan", "DangGiao"].includes(oldStatus)
+      ) {
+        const sqlRestoreStock = `
+          UPDATE sanpham_bienthe bt
+          JOIN donhangchitiet dhct
+            ON bt.MaBienThe = dhct.MaBienThe
+          SET bt.SoLuong = bt.SoLuong + dhct.SoLuong
+          WHERE dhct.MaDonHang = ?
+        `;
+
+        db.query(sqlRestoreStock, [MaDonHang], (err3) => {
+          if (err3) {
+            return res.status(500).json(err3);
+          }
+
+          return res.json({
+            status: "Success",
+            message: "Đã hủy đơn hàng và hoàn lại số lượng tồn kho",
+          });
+        });
+
+        return;
+      }
+
+      return res.json({
+        status: "Success",
+        message: "Đã cập nhật trạng thái",
+      });
     });
   });
 });
@@ -2123,7 +2159,6 @@ app.post("/payment/momo", async (req, res) => {
     signature,
   };
 
-
   try {
     const result = await axios.post(
       "https://test-payment.momo.vn/v2/gateway/api/create",
@@ -2132,7 +2167,7 @@ app.post("/payment/momo", async (req, res) => {
         headers: {
           "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     console.log("MOMO RESULT:", result.data);
@@ -2149,7 +2184,6 @@ app.post("/payment/momo", async (req, res) => {
 
 //api acll back momo
 app.post("/momo/ipn", (req, res) => {
-
   const { orderId, resultCode } = req.body;
   const MaDonHang = String(orderId).split("_")[0];
 
@@ -2192,10 +2226,7 @@ app.post("/momo/ipn", (req, res) => {
             return res.status(500).json(err3);
           }
 
-          console.log(
-            "Số biến thể đã trừ tồn:",
-            result3.affectedRows
-          );
+          console.log("Số biến thể đã trừ tồn:", result3.affectedRows);
 
           return res.status(200).json({
             message: "Thanh toán thành công",
@@ -2231,6 +2262,6 @@ app.post("/momo/ipn", (req, res) => {
   }
 });
 
-    app.listen(5000, () => {
-      console.log("Server đang chạy trên cổng 5000");
-    });
+app.listen(5000, () => {
+  console.log("Server đang chạy trên cổng 5000");
+});

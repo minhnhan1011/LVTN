@@ -15,6 +15,7 @@ function ProductAdmin() {
   const [sizes, setSizes] = useState([]);
   const [promotions, setPromotions] = useState([]);
   const [search, setSearch] = useState("");
+  const [quantityFilter, setQuantityFilter] = useState("all");
 
   const [values, setValues] = useState({
     TenSanPham: "",
@@ -367,6 +368,13 @@ function ProductAdmin() {
     );
   });
 
+  const quantityProducts =
+    quantityFilter === "all"
+      ? filteredProducts
+      : quantityFilter === "inStock"
+        ? filteredProducts.filter((item) => Number(item.TongSoLuong) > 0)
+        : filteredProducts.filter((item) => Number(item.TongSoLuong) === 0);
+
   return (
     <div className="admin-page">
       <aside className="admin-sidebar">
@@ -404,6 +412,16 @@ function ProductAdmin() {
           >
             {showForm ? "Đóng" : "+ Thêm sản phẩm"}
           </button>
+
+          <select
+            className="status-filter-select"
+            value={quantityFilter}
+            onChange={(e) => setQuantityFilter(e.target.value)}
+          >
+            <option value="all">Tất cả trạng thái</option>
+            <option value="inStock">Còn hàng</option>
+            <option value="outOfStock">Hết hàng</option>
+          </select>
         </div>
 
         {showForm && (
@@ -728,7 +746,7 @@ function ProductAdmin() {
           </thead>
 
           <tbody>
-            {filteredProducts.map((item) => (
+            {quantityProducts.map((item) => (
               <tr key={item.MaSanPham}>
                 <td>
                   {item.DuongDan && (

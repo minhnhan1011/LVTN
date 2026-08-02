@@ -80,10 +80,10 @@ function DetailProduct() {
 
   const uniqueSizes = [
     ...new Set(
-      product.variants?.filter(
-        (variant) => variant.TenMauSac === selectedColor,
-      ).map((variant) => variant.TenSize),
-    )
+      product.variants
+        ?.filter((variant) => variant.TenMauSac === selectedColor)
+        .map((variant) => variant.TenSize),
+    ),
   ];
 
   const selectedVariant = product.variants?.find(
@@ -128,6 +128,7 @@ function DetailProduct() {
         TenMauSac: selectedColor,
         TenSize: selectedSize,
         SoLuong: quantity,
+        SoLuongTonKho: Number(selectedVariant.SoLuong), // <-- thêm dòng này
         DonGia: finalPrice,
         DonGiaGoc: product.DonGia,
         KhuyenMai: product.KhuyenMai || 0,
@@ -157,6 +158,7 @@ function DetailProduct() {
             ? {
                 ...item,
                 SoLuong: newQuantity,
+                SoLuongTonKho: Number(selectedVariant.SoLuong),
               }
             : item,
         );
@@ -240,7 +242,7 @@ function DetailProduct() {
     if (!confirmDelete) {
       return;
     }
-    
+
     try {
       await axios.put(`http://localhost:5000/comments/${MaBinhLuan}`, {
         MaNguoiDung: user.MaNguoiDung,
