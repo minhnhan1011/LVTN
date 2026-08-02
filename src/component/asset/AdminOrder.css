@@ -487,3 +487,12 @@
     font-size: 21px;
   }
 }
+
+.status-filter-select{
+  padding: 8px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+}

@@ -10,6 +10,7 @@ function AdminOrder() {
   const [orderDetails, setOrderDetails] = useState([]);
   const [showDetail, setShowDetail] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
 
   const handleLogout = () => {
     axios
@@ -129,6 +130,11 @@ function AdminOrder() {
     (order) => order.TrangThai === "DaHuy",
   ).length;
 
+  const filteredOrders =
+    statusFilter === "all"
+      ? orders
+      : orders.filter((order) => order.TrangThai === statusFilter);
+
   return (
     <div className="admin-page">
       <aside className="admin-sidebar">
@@ -176,6 +182,19 @@ function AdminOrder() {
           </div>
         </section>
 
+        <select
+          className="status-filter-select"
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+        >
+          <option value="all">Tất cả</option>
+          <option value="ChoXacNhan">Chờ xác nhận</option>
+          <option value="DaXacNhan">Đã xác nhận</option>
+          <option value="DangGiao">Đang giao</option>
+          <option value="HoanThanh">Hoàn thành</option>
+          <option value="DaHuy">Đã hủy</option>
+        </select>
+
         <section className="admin-order-table-box">
           <table className="admin-order-table">
             <thead>
@@ -190,8 +209,8 @@ function AdminOrder() {
             </thead>
 
             <tbody>
-              {orders.length > 0 ? (
-                orders.map((order) => (
+              {filteredOrders.length > 0 ? (
+                filteredOrders.map((order) => (
                   <tr
                     key={order.MaDonHang}
                     className="order-row"
