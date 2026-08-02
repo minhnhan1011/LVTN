@@ -28,7 +28,7 @@ function AppRouter() {
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/orderpage" element={<OrderPage />} />
         <Route path="/admin/order" element={<AdminOrder />} />
-        <Route path="/momo-checkout" element={<MomoCheckout />} />
+        {/* <Route path="/momo-checkout" element={<MomoCheckout />} /> */}
         <Route path="/profile" element={<UserProfile />} />
       </Routes>
     </BrowserRouter>

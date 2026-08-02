@@ -124,6 +124,17 @@ function ProductAdmin() {
       return;
     }
 
+    const isDuplicateName = products.some(
+      (item) =>
+        item.TenSanPham.trim().toLowerCase() ===
+        values.TenSanPham.trim().toLowerCase()
+    );
+
+    if (isDuplicateName) {
+      alert("Tên sản phẩm đã tồn tại");
+      return;
+    }
+
     for (let item of variants) {
       if (!item.MaMauSac || !item.MaSize || item.SoLuong === "") {
         alert("Vui lòng nhập đầy đủ màu, size và số lượng");

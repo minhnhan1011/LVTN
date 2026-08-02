@@ -115,18 +115,22 @@ function CheckoutPage() {
       });
 
       if (info.PhuongThucThanhToan === "BANK") {
-        localStorage.setItem(
-          "momoCheckoutData",
-          JSON.stringify({
-            MaNguoiDung,
+        const momoRes = await axios.post(
+          "http://localhost:5000/payment/momo",
+          {
+            amount: total,
             MaDonHang: checkoutRes.data.MaDonHang,
-            info,
-            items: cart,
-            TongTien: total,
-          })
+          }
         );
 
-        navigate("/momo-checkout");
+        if (momoRes.data.payUrl) {
+          localStorage.removeItem("checkoutItems");
+
+          window.location.href = momoRes.data.payUrl;
+          return;
+        }
+
+        alert("Không nhận được link thanh toán MoMo");
         return;
       }
 

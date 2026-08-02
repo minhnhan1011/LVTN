@@ -941,6 +941,7 @@ app.get("/products", (req, res) => {
       sp.TenSanPham,
       sp.DonGia,
       sp.MaKhuyenMai,
+      km.GiaTriGiam AS KhuyenMai,
       sp.MoTa,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
@@ -957,6 +958,7 @@ app.get("/products", (req, res) => {
       AND bt.TrangThai = 'Hien'
     LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
     LEFT JOIN size sz ON bt.MaSize = sz.MaSize
+    LEFT JOIN khuyenmai km ON sp.MaKhuyenMai = km.MaKhuyenMai
     WHERE sp.TrangThai = 'DangBan'
     GROUP BY 
       sp.MaSanPham,
@@ -984,48 +986,56 @@ app.get("/products", (req, res) => {
 // API xem chi tiết sản phẩm
 app.get("/product/:id", (req, res) => {
   const sqlProduct = `
-  SELECT
-    sp.MaSanPham,
-    sp.TenSanPham,
-    sp.DonGia,
-    sp.MaKhuyenMai,
-    sp.MoTa,
-    lsp.TenLoaiSanPham,
-    th.TenThuongHieu,
-    ha.DuongDan
-  FROM sanpham sp
-  LEFT JOIN loaisanpham lsp
-    ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
-  LEFT JOIN thuonghieu th
-    ON sp.MaThuongHieu = th.MaThuongHieu
-  LEFT JOIN hinhanh ha
-    ON sp.MaSanPham = ha.MaSanPham
-  WHERE sp.MaSanPham = ?
-  AND sp.TrangThai = 'DangBan'
-  LIMIT 1
-`;
+    SELECT
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.DonGia,
+      sp.MaKhuyenMai,
+      km.GiaTriGiam AS KhuyenMai,
+      sp.MoTa,
+      lsp.TenLoaiSanPham,
+      th.TenThuongHieu,
+      ha.DuongDan
+    FROM sanpham sp
+    LEFT JOIN loaisanpham lsp
+      ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
+    LEFT JOIN thuonghieu th
+      ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN hinhanh ha
+      ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN khuyenmai km
+      ON sp.MaKhuyenMai = km.MaKhuyenMai
+    WHERE sp.MaSanPham = ?
+      AND sp.TrangThai = 'DangBan'
+
+    LIMIT 1
+  `;
 
   db.query(sqlProduct, [req.params.id], (err, productData) => {
     if (err) return res.status(500).json(err);
 
     if (productData.length === 0) {
-      return res.status(404).json({ message: "Không tìm thấy sản phẩm" });
+      return res.status(404).json({
+        message: "Không tìm thấy sản phẩm",
+      });
     }
 
     const sqlVariants = `
-  SELECT
-    bt.MaBienThe,
-    bt.MaMauSac,
-    ms.TenMauSac,
-    bt.MaSize,
-    sz.TenSize,
-    bt.SoLuong
-  FROM sanpham_bienthe bt
-  LEFT JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
-  LEFT JOIN size sz ON bt.MaSize = sz.MaSize
-  WHERE bt.MaSanPham = ?
-    AND bt.TrangThai = 'Hien'
-`;
+      SELECT
+        bt.MaBienThe,
+        bt.MaMauSac,
+        ms.TenMauSac,
+        bt.MaSize,
+        sz.TenSize,
+        bt.SoLuong
+      FROM sanpham_bienthe bt
+      LEFT JOIN mausac ms 
+        ON bt.MaMauSac = ms.MaMauSac
+      LEFT JOIN size sz 
+        ON bt.MaSize = sz.MaSize
+      WHERE bt.MaSanPham = ?
+        AND bt.TrangThai = 'Hien'
+    `;
 
     db.query(sqlVariants, [req.params.id], (err2, variantData) => {
       if (err2) return res.status(500).json(err2);
@@ -1241,15 +1251,28 @@ app.get("/home/new-products", (req, res) => {
       sp.TenSanPham,
       sp.DonGia,
       sp.MaKhuyenMai,
+      km.GiaTriGiam AS KhuyenMai,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
-    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
-    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
-    left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
+    LEFT JOIN thuonghieu th 
+      ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN hinhanh ha 
+      ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN sanpham_bienthe sl 
+      ON sp.MaSanPham = sl.MaSanPham
+    LEFT JOIN khuyenmai km
+      ON sp.MaKhuyenMai = km.MaKhuyenMai
     WHERE sp.TrangThai = 'DangBan'
-    GROUP BY sp.MaSanPham
-    having sum(sl.SoLuong) > 0
+    GROUP BY 
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.DonGia,
+      sp.MaKhuyenMai,
+      km.GiaTriGiam,
+      th.TenThuongHieu,
+      ha.DuongDan
+    HAVING SUM(sl.SoLuong) > 0
     ORDER BY sp.MaSanPham DESC
     LIMIT 4
   `;
@@ -1313,6 +1336,32 @@ app.get("/home/adidas-products", (req, res) => {
     return res.json(data);
   });
 });
+
+app.get("/home/promo-products", (req, res) => {
+  const sql = `
+    SELECT 
+      sp.MaSanPham,
+      sp.TenSanPham,
+      sp.DonGia,
+      sp.MaKhuyenMai,
+      th.TenThuongHieu,
+      ha.DuongDan
+    FROM sanpham sp
+    LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
+    LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
+    WHERE sp.TrangThai = 'DangBan'
+    AND sp.MaKhuyenMai is not NULL
+    ORDER BY sp.MaSanPham DESC
+    LIMIT 8
+  `;
+
+  db.query(sql, (err, data) => {
+    if (err) return res.status(500).json(err);
+    return res.json(data);
+  });
+});
+
 
 // api gio hang luu thong tin gio hang
 app.post("/cart", (req, res) => {
@@ -1722,7 +1771,8 @@ app.put("/orders/cancel/:MaDonHang", (req, res) => {
   const sqlGetOrder = `
     SELECT 
       dh.TrangThai,
-      tt.PhuongThucThanhToan
+      tt.PhuongThucThanhToan,
+      tt.TrangThai AS TrangThaiThanhToan
     FROM donhang dh
     LEFT JOIN thanhtoan tt ON dh.MaDonHang = tt.MaDonHang
     WHERE dh.MaDonHang = ?
@@ -1739,6 +1789,7 @@ app.put("/orders/cancel/:MaDonHang", (req, res) => {
 
     const oldStatus = data[0].TrangThai;
     const paymentMethod = data[0].PhuongThucThanhToan;
+    const paymentStatus = data[0].TrangThaiThanhToan;
 
     if (oldStatus !== "ChoXacNhan") {
       return res.status(400).json({
@@ -1755,7 +1806,11 @@ app.put("/orders/cancel/:MaDonHang", (req, res) => {
     db.query(sqlCancel, [MaDonHang], (err2) => {
       if (err2) return res.status(500).json(err2);
 
-      if (paymentMethod === "BANK") {
+      // hoan kho neu momo thanh cong
+      if (
+        paymentMethod === "BANK" &&
+        paymentStatus === "DaThanhToan"
+      ) {
         const sqlRestoreStock = `
           UPDATE sanpham_bienthe bt
           JOIN donhangchitiet dhct 

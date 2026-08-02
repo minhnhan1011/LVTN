@@ -186,11 +186,10 @@
 }
 
 .admin-product-table img {
-  width: 70px;
-  height: 70px;
+  width: 80px;
+  height: 80px;
   object-fit: cover;
-  border-radius: 12px;
-  background: #f3f4f6;
+  border-radius: 6px;
 }
 
 .admin-product-table button {
