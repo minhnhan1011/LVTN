@@ -71,6 +71,13 @@ function ProductPage() {
     });
   };
 
+  const handleQuickTypeFilter = (typeName) => {
+    setFilters((prev) => ({
+      ...prev,
+      type: typeName,
+    }));
+  };
+
   const clearFilters = () => {
     setFilters({
       price: "",
@@ -83,12 +90,17 @@ function ProductPage() {
 
   const filteredProducts = products.filter((item) => {
     const productName = item.TenSanPham || "";
-    const finalPrice = calcDiscountPrice(item.DonGia || 0, item.KhuyenMai || 0);
+    const finalPrice = calcDiscountPrice(
+      item.DonGia || 0,
+      item.KhuyenMai || 0
+    );
 
     const matchSearch =
       searchKeyword === "" ||
       productName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
-      (item.TenThuongHieu || "").toLowerCase().includes(searchKeyword.toLowerCase());
+      (item.TenThuongHieu || "")
+        .toLowerCase()
+        .includes(searchKeyword.toLowerCase());
 
     const matchType =
       filters.type === "" || item.TenLoaiSanPham === filters.type;
@@ -129,15 +141,38 @@ function ProductPage() {
       <Header />
 
       <main className="product-page">
-        <aside className="product-filter">
-          <h2>Bộ lọc</h2>
+        <section className="quick-category-section">
+          <div className="quick-category-title">
+            <h2>Danh mục sản phẩm</h2>
+          </div>
 
-          {searchKeyword && (
-            <div className="search-result-box">
-              Từ khóa: <strong>{searchKeyword}</strong>
-            </div>
-          )}
+          <div className="quick-category-list">
+            <button
+              className={`quick-category-btn ${
+                filters.type === "" ? "active" : ""
+              }`}
+              onClick={() => handleQuickTypeFilter("")}
+            >
+              Tất cả
+            </button>
 
+            {productTypes.map((item) => (
+              <button
+                key={item.MaLoaiSanPham}
+                className={`quick-category-btn ${
+                  filters.type === item.TenLoaiSanPham ? "active" : ""
+                }`}
+                onClick={() =>
+                  handleQuickTypeFilter(item.TenLoaiSanPham)
+                }
+              >
+                {item.TenLoaiSanPham}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="product-filter">
           <div className="filter-group">
             <label>Giá tiền</label>
             <select
@@ -147,24 +182,10 @@ function ProductPage() {
             >
               <option value="">Tất cả giá</option>
               <option value="under500">Dưới 500.000đ</option>
-              <option value="500to1000">500.000đ - 1.000.000đ</option>
+              <option value="500to1000">
+                500.000đ - 1.000.000đ
+              </option>
               <option value="above1000">Trên 1.000.000đ</option>
-            </select>
-          </div>
-
-          <div className="filter-group">
-            <label>Loại sản phẩm</label>
-            <select
-              name="type"
-              value={filters.type}
-              onChange={handleFilterChange}
-            >
-              <option value="">Tất cả loại</option>
-              {productTypes.map((item) => (
-                <option key={item.MaLoaiSanPham} value={item.TenLoaiSanPham}>
-                  {item.TenLoaiSanPham}
-                </option>
-              ))}
             </select>
           </div>
 
@@ -177,7 +198,10 @@ function ProductPage() {
             >
               <option value="">Tất cả thương hiệu</option>
               {brands.map((item) => (
-                <option key={item.MaThuongHieu} value={item.TenThuongHieu}>
+                <option
+                  key={item.MaThuongHieu}
+                  value={item.TenThuongHieu}
+                >
                   {item.TenThuongHieu}
                 </option>
               ))}
@@ -209,23 +233,37 @@ function ProductPage() {
             >
               <option value="">Tất cả màu</option>
               {colors.map((item) => (
-                <option key={item.MaMauSac} value={item.TenMauSac}>
+                <option
+                  key={item.MaMauSac}
+                  value={item.TenMauSac}
+                >
                   {item.TenMauSac}
                 </option>
               ))}
             </select>
           </div>
 
-          <button className="clear-filter-btn" onClick={clearFilters}>
+          <button
+            className="clear-filter-btn"
+            onClick={clearFilters}
+          >
             Xóa lọc
           </button>
-        </aside>
+        </section>
 
         <section className="product-list-section">
+          {searchKeyword && (
+            <div className="search-result-box">
+              Từ khóa: <strong>{searchKeyword}</strong>
+            </div>
+          )}
+
           <div className="product-page-title">
             <h1>
               {searchKeyword
                 ? `Kết quả tìm kiếm: ${searchKeyword}`
+                : filters.type
+                ? filters.type
                 : filters.brand
                 ? `Sản phẩm ${filters.brand}`
                 : "Tất cả sản phẩm"}
@@ -235,7 +273,9 @@ function ProductPage() {
           </div>
 
           {filteredProducts.length === 0 ? (
-            <div className="no-product">Không tìm thấy sản phẩm phù hợp</div>
+            <div className="no-product">
+              Không tìm thấy sản phẩm phù hợp
+            </div>
           ) : (
             <div className="product-grid">
               {filteredProducts.map((item) => {
@@ -245,7 +285,10 @@ function ProductPage() {
                 );
 
                 return (
-                  <div className="product-card" key={item.MaSanPham}>
+                  <div
+                    className="product-card"
+                    key={item.MaSanPham}
+                  >
                     <img
                       src={
                         item.DuongDan
@@ -264,7 +307,10 @@ function ProductPage() {
                       {Number(item.KhuyenMai) > 0 ? (
                         <div className="price-box">
                           <span className="old-price">
-                            {Number(item.DonGia).toLocaleString()}đ
+                            {Number(
+                              item.DonGia
+                            ).toLocaleString()}
+                            đ
                           </span>
 
                           <strong className="sale-price">
@@ -277,11 +323,16 @@ function ProductPage() {
                         </div>
                       ) : (
                         <strong className="sale-price">
-                          {Number(item.DonGia).toLocaleString()}đ
+                          {Number(
+                            item.DonGia
+                          ).toLocaleString()}
+                          đ
                         </strong>
                       )}
 
-                      <Link to={`/detailproduct/${item.MaSanPham}`}>
+                      <Link
+                        to={`/detailproduct/${item.MaSanPham}`}
+                      >
                         <button>Xem chi tiết</button>
                       </Link>
                     </div>

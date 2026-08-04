@@ -506,73 +506,53 @@ app.get("/admin/products", (req, res) => {
       sp.MaLoaiSanPham,
       sp.MaThuongHieu,
       sp.TrangThai,
-
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
       ha.DuongDan,
-
       km.TenKhuyenMai,
       km.LoaiGiamGia,
       km.GiaTriGiam,
       km.NgayBatDau,
       km.NgayKetThuc,
       km.TrangThai AS TrangThaiKhuyenMai,
-
       CASE
         WHEN km.MaKhuyenMai IS NULL THEN sp.DonGia
-
         WHEN km.TrangThai <> 'HoatDong' THEN sp.DonGia
-
         WHEN NOW() NOT BETWEEN km.NgayBatDau AND km.NgayKetThuc
           THEN sp.DonGia
-
         WHEN km.LoaiGiamGia = 'PhanTram'
           THEN sp.DonGia - (sp.DonGia * km.GiaTriGiam / 100)
-
         WHEN km.LoaiGiamGia = 'SoTien'
           THEN GREATEST(sp.DonGia - km.GiaTriGiam, 0)
-
         ELSE sp.DonGia
       END AS GiaSauKhuyenMai,
-
       GROUP_CONCAT(
         DISTINCT ms.TenMauSac
         ORDER BY ms.TenMauSac
         SEPARATOR ', '
       ) AS DanhSachMau,
-
       GROUP_CONCAT(
         DISTINCT sz.TenSize
         ORDER BY sz.TenSize
         SEPARATOR ', '
       ) AS DanhSachSize,
-
       COALESCE(SUM(bt.SoLuong), 0) AS TongSoLuong
-
     FROM sanpham sp
-
     LEFT JOIN loaisanpham lsp
       ON sp.MaLoaiSanPham = lsp.MaLoaiSanPham
-
     LEFT JOIN thuonghieu th
       ON sp.MaThuongHieu = th.MaThuongHieu
-
     LEFT JOIN hinhanh ha
       ON sp.MaSanPham = ha.MaSanPham
-
     LEFT JOIN khuyenmai km
       ON sp.MaKhuyenMai = km.MaKhuyenMai
-
     LEFT JOIN sanpham_bienthe bt 
       ON sp.MaSanPham = bt.MaSanPham
       AND bt.TrangThai = 'Hien'
-
     LEFT JOIN mausac ms
       ON bt.MaMauSac = ms.MaMauSac
-
     LEFT JOIN size sz
       ON bt.MaSize = sz.MaSize
-
     GROUP BY 
       sp.MaSanPham,
       sp.TenSanPham,
@@ -582,18 +562,15 @@ app.get("/admin/products", (req, res) => {
       sp.MaLoaiSanPham,
       sp.MaThuongHieu,
       sp.TrangThai,
-
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
       ha.DuongDan,
-
       km.TenKhuyenMai,
       km.LoaiGiamGia,
       km.GiaTriGiam,
       km.NgayBatDau,
       km.NgayKetThuc,
       km.TrangThai
-
     ORDER BY sp.MaSanPham DESC
   `;
 
@@ -791,7 +768,6 @@ app.put("/admin/products/:id", (req, res) => {
     },
   );
 });
-
 
 // api bien the san pham cua admin
 app.get("/admin/products/:id/variants", (req, res) => {
@@ -1339,7 +1315,6 @@ app.get("/home/promo-products", (req, res) => {
   });
 });
 
-
 // api gio hang luu thong tin gio hang
 app.post("/cart", (req, res) => {
   const { MaNguoiDung, MaBienThe, SoLuong } = req.body;
@@ -1742,7 +1717,6 @@ app.post("/checkout", async (req, res) => {
   }
 });
 
-
 // api huy don hang
 app.put("/orders/cancel/:MaDonHang", (req, res) => {
   const { MaDonHang } = req.params;
@@ -1786,10 +1760,7 @@ app.put("/orders/cancel/:MaDonHang", (req, res) => {
       if (err2) return res.status(500).json(err2);
 
       // hoan kho neu momo thanh cong
-      if (
-        paymentMethod === "BANK" &&
-        paymentStatus === "DaThanhToan"
-      ) {
+      if (paymentMethod === "BANK" && paymentStatus === "DaThanhToan") {
         const sqlRestoreStock = `
           UPDATE sanpham_bienthe bt
           JOIN donhangchitiet dhct 
@@ -2136,6 +2107,73 @@ app.get("/admin/promotions", (req, res) => {
 
     return res.json(data);
   });
+});
+
+app.delete("/admin/promotions/:MaKhuyenMai", (req, res) => {
+  const { MaKhuyenMai } = req.params;
+
+  const sql = `
+    DELETE FROM khuyenmai
+    WHERE MaKhuyenMai = ?
+  `;
+
+  db.query(sql, [MaKhuyenMai], (err, data) => {
+    if (err) {
+      return res.status(500).json(err);
+    }
+
+    return res.json({ message: "Khuyến mãi đã được xóa" });
+  });
+});
+
+app.post("/admin/promotions", (req, res) => {
+  const {
+    TenKhuyenMai,
+    LoaiGiamGia,
+    GiaTriGiam,
+    NgayBatDau,
+    NgayKetThuc
+  } = req.body;
+
+  const MaKhuyenMai = crypto.randomUUID();
+
+  const sql = `
+    INSERT INTO khuyenmai
+    (
+      MaKhuyenMai,
+      TenKhuyenMai,
+      LoaiGiamGia,
+      GiaTriGiam,
+      NgayBatDau,
+      NgayKetThuc,
+      ApDungToanBo,
+      TrangThai
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(
+    sql,
+    [
+      MaKhuyenMai,
+      TenKhuyenMai,
+      LoaiGiamGia,
+      GiaTriGiam,
+      NgayBatDau,
+      NgayKetThuc,
+      0,
+      "HoatDong"
+    ],
+    (err, data) => {
+      if (err) {
+        return res.status(500).json(err);
+      }
+
+      return res.json({
+        message: "Khuyến mãi đã được thêm"
+      });
+    }
+  );
 });
 
 app.post("/payment/momo", async (req, res) => {
