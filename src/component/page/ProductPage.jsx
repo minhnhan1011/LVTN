@@ -87,7 +87,8 @@ function ProductPage() {
 
     const matchSearch =
       searchKeyword === "" ||
-      productName.toLowerCase().includes(searchKeyword.toLowerCase());
+      productName.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+      (item.TenThuongHieu || "").toLowerCase().includes(searchKeyword.toLowerCase());
 
     const matchType =
       filters.type === "" || item.TenLoaiSanPham === filters.type;

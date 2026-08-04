@@ -792,29 +792,6 @@ app.put("/admin/products/:id", (req, res) => {
   );
 });
 
-// api lấy danh sách khuyến mãi
-app.get("/admin/promotions", (req, res) => {
-  const sql = `
-    SELECT
-      MaKhuyenMai,
-      TenKhuyenMai,
-      LoaiGiamGia,
-      GiaTriGiam,
-      NgayBatDau,
-      NgayKetThuc,
-      TrangThai
-    FROM khuyenmai
-    ORDER BY TenKhuyenMai ASC
-  `;
-
-  db.query(sql, (err, data) => {
-    if (err) {
-      return res.status(500).json(err);
-    }
-
-    return res.json(data);
-  });
-});
 
 // api bien the san pham cua admin
 app.get("/admin/products/:id/variants", (req, res) => {
@@ -1765,6 +1742,8 @@ app.post("/checkout", async (req, res) => {
   }
 });
 
+
+// api huy don hang
 app.put("/orders/cancel/:MaDonHang", (req, res) => {
   const { MaDonHang } = req.params;
 
@@ -2135,6 +2114,30 @@ app.get("/admin/orders/:MaDonHang", (req, res) => {
 //   }
 // });
 
+// api lấy danh sách khuyến mãi
+app.get("/admin/promotions", (req, res) => {
+  const sql = `
+    SELECT
+      MaKhuyenMai,
+      TenKhuyenMai,
+      LoaiGiamGia,
+      GiaTriGiam,
+      NgayBatDau,
+      NgayKetThuc,
+      TrangThai
+    FROM khuyenmai
+    ORDER BY TenKhuyenMai ASC
+  `;
+
+  db.query(sql, (err, data) => {
+    if (err) {
+      return res.status(500).json(err);
+    }
+
+    return res.json(data);
+  });
+});
+
 app.post("/payment/momo", async (req, res) => {
   console.log("BODY MOMO:", req.body);
 
@@ -2290,7 +2293,7 @@ app.post("/momo/ipn", (req, res) => {
       });
     });
   } else {
-    // Thanh toán thất bại hoặc bị hủy
+    // Thanh toan that bai
     const sqlFailOrder = `
       UPDATE donhang
       SET TrangThai = 'DaHuy'

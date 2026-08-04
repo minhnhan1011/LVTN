@@ -12,6 +12,7 @@ import OrderPage from "../component/page/OrderPage";
 import AdminOrder from "../component/page/AdminOrder";
 import MomoCheckout from "../component/page/MomoCheckout";
 import UserProfile from "../component/page/UserProfile";
+import PromoAdmin from "../component/page/PromoAdmin";
 
 function AppRouter() {
     return (
@@ -30,6 +31,7 @@ function AppRouter() {
         <Route path="/admin/order" element={<AdminOrder />} />
         {/* <Route path="/momo-checkout" element={<MomoCheckout />} /> */}
         <Route path="/profile" element={<UserProfile />} />
+        <Route path="/admin/promo" element={<PromoAdmin />} />
       </Routes>
     </BrowserRouter>
   );

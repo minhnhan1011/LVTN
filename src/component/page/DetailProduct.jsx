@@ -15,7 +15,7 @@ function DetailProduct() {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-  // State bình luận
+
   const [comments, setComments] = useState([]);
   const [commentContent, setCommentContent] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);

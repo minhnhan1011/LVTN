@@ -395,6 +395,7 @@ function ProductAdmin() {
           <Link to="/admin">Quản lý User</Link>
           <Link to="/admin/products">Quản lý sản phẩm</Link>
           <Link to="/admin/order">Quản lý đơn hàng</Link>
+          <Link to="/admin/promo">Quản lý khuyến mãi</Link>
           <Link to="/" onClick={handleLogout}>
             Đăng xuất
           </Link>
