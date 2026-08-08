@@ -9,6 +9,7 @@ function OrderPage() {
 
   const MaNguoiDung = localStorage.getItem("MaNguoiDung");
   const ordersPerPage = 5;
+  // const orderPromo = localStorage.getItem("lastOrderPromo");
 
   const convertStatus = (status) => {
     if (status === "ChoThanhToan") return "Chờ thanh toán";
@@ -35,7 +36,7 @@ function OrderPage() {
 
     try {
       const res = await axios.get(
-        `http://localhost:5000/orders/${MaNguoiDung}`
+        `http://localhost:5000/orders/${MaNguoiDung}`,
       );
 
       const groupedOrders = {};
@@ -51,6 +52,7 @@ function OrderPage() {
             SoDienThoai: item.SoDienThoai,
             DiaChi: `${item.DiaChiChiTiet}, ${item.Phuong}, ${item.Quan}, ${item.ThanhPho}`,
             PhuongThucThanhToan: item.PhuongThucThanhToan,
+            KhuyenMai: item.KhuyenMai || "Không có",
             SanPham: [],
           };
         }
@@ -140,7 +142,7 @@ function OrderPage() {
 
                     <span
                       className={`order-status ${getStatusClass(
-                        order.TrangThai
+                        order.TrangThai,
                       )}`}
                     >
                       {convertStatus(order.TrangThai)}
@@ -157,9 +159,15 @@ function OrderPage() {
                     <p>
                       <strong>Địa chỉ:</strong> {order.DiaChi}
                     </p>
+                    {/* <p>
+                      {orderPromo && (
+                        <p>
+                          <strong>Khuyến mãi:</strong> {orderPromo}
+                        </p>
+                      )}
+                    </p> */}
                     <p>
-                      <strong>Thanh toán:</strong>{" "}
-                      {order.PhuongThucThanhToan}
+                      <strong>Thanh toán:</strong> {order.PhuongThucThanhToan}
                     </p>
                   </div>
 

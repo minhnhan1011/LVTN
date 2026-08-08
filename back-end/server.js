@@ -1367,12 +1367,26 @@ app.post("/cart", (req, res) => {
           });
         } else {
           const sqlPrice = `
-  SELECT 
+  SELECT
     sp.DonGia,
     sp.MaKhuyenMai,
-    (sp.DonGia - (sp.DonGia * IFNULL(sp.MaKhuyenMai, 0) / 100)) AS GiaSauGiam
+    km.GiaTriGiam,
+    km.LoaiGiamGia,
+
+    CASE
+      WHEN km.LoaiGiamGia = 'PhanTram'
+        THEN sp.DonGia - (sp.DonGia * km.GiaTriGiam / 100)
+
+      WHEN km.LoaiGiamGia = 'SoTien'
+        THEN GREATEST(sp.DonGia - km.GiaTriGiam, 0)
+
+      ELSE sp.DonGia
+    END AS GiaSauGiam
+
   FROM sanpham_bienthe bt
   JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
+  LEFT JOIN khuyenmai km ON sp.MaKhuyenMai = km.MaKhuyenMai
+
   WHERE bt.MaBienThe = ?
 `;
 
@@ -1438,6 +1452,8 @@ app.get("/cart/:MaNguoiDung", (req, res) => {
       bt.SoLuong AS SoLuongTonKho,
       sp.DonGia AS DonGiaGoc,
       sp.MaKhuyenMai,
+      km.GiaTriGiam AS KhuyenMai,
+      km.LoaiGiamGia,
       sp.TenSanPham,
       sp.MaSanPham,
       ms.TenMauSac,
@@ -1452,11 +1468,13 @@ app.get("/cart/:MaNguoiDung", (req, res) => {
     JOIN mausac ms ON bt.MaMauSac = ms.MaMauSac
     JOIN size sz ON bt.MaSize = sz.MaSize
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN khuyenmai km ON sp.MaKhuyenMai = km.MaKhuyenMai
     WHERE gh.MaNguoiDung = ?
   `;
 
   db.query(sql, [req.params.MaNguoiDung], (err, data) => {
     if (err) return res.status(500).json(err);
+
     return res.json(data);
   });
 });
@@ -2139,13 +2157,8 @@ app.delete("/admin/promotions/:MaKhuyenMai", (req, res) => {
 });
 
 app.post("/admin/promotions", (req, res) => {
-  const {
-    TenKhuyenMai,
-    LoaiGiamGia,
-    GiaTriGiam,
-    NgayBatDau,
-    NgayKetThuc
-  } = req.body;
+  const { TenKhuyenMai, LoaiGiamGia, GiaTriGiam, NgayBatDau, NgayKetThuc } =
+    req.body;
 
   const MaKhuyenMai = crypto.randomUUID();
 
@@ -2174,7 +2187,7 @@ app.post("/admin/promotions", (req, res) => {
       NgayBatDau,
       NgayKetThuc,
       0,
-      "HoatDong"
+      "HoatDong",
     ],
     (err, data) => {
       if (err) {
@@ -2182,9 +2195,9 @@ app.post("/admin/promotions", (req, res) => {
       }
 
       return res.json({
-        message: "Khuyến mãi đã được thêm"
+        message: "Khuyến mãi đã được thêm",
       });
-    }
+    },
   );
 });
 
@@ -2196,13 +2209,13 @@ app.put("/admin/promotions/:MaKhuyenMai", (req, res) => {
     GiaTriGiam,
     NgayBatDau,
     NgayKetThuc,
-    TrangThai
+    TrangThai,
   } = req.body;
 
   const ngayHienTai = new Date();
   if (new Date(NgayKetThuc) < ngayHienTai) {
     return res.status(400).json({
-      message: "Ngày kết thúc không được nhỏ hơn ngày hiện tại"
+      message: "Ngày kết thúc không được nhỏ hơn ngày hiện tại",
     });
   }
 
@@ -2233,7 +2246,7 @@ app.put("/admin/promotions/:MaKhuyenMai", (req, res) => {
       NgayBatDau,
       NgayKetThuc,
       TrangThai,
-      MaKhuyenMai
+      MaKhuyenMai,
     ],
     (err, data) => {
       if (err) {
@@ -2242,10 +2255,37 @@ app.put("/admin/promotions/:MaKhuyenMai", (req, res) => {
 
       console.log("Khuyến mãi đã được cập nhật:");
       return res.json({
-        message: "Khuyến mãi đã được cập nhật"
+        message: "Khuyến mãi đã được cập nhật",
+      });
+    },
+  );
+});
+
+//api ma khuyen mai ben gio hang
+app.post("/check-promo", (req, res) => {
+  const { TenKhuyenMai } = req.body;
+
+  const sql = `
+    SELECT *
+    FROM khuyenmai
+    WHERE TenKhuyenMai = ?
+      AND TrangThai = 'HoatDong'
+      AND CURDATE() BETWEEN DATE(NgayBatDau) AND DATE(NgayKetThuc)
+  `;
+
+  db.query(sql, [TenKhuyenMai], (err, data) => {
+    if (err) {
+      return res.status(500).json(err);
+    }
+
+    if (data.length === 0) {
+      return res.status(400).json({
+        message: "Mã khuyến mãi không hợp lệ hoặc đã hết hạn",
       });
     }
-  );
+
+    return res.json(data[0]);
+  });
 });
 
 app.post("/payment/momo", async (req, res) => {

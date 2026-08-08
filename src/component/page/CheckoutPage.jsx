@@ -9,6 +9,18 @@ function CheckoutPage() {
   const navigate = useNavigate();
   // const [DiaChiChiTiet, setDiaChiChiTiet] = useState("");
 
+  const [appliedPromo] = useState(() => {
+    const promo = localStorage.getItem("appliedPromo");
+
+    if (!promo) return null;
+
+    try {
+      return JSON.parse(promo);
+    } catch {
+      return null;
+    }
+  });
+
   const [info, setInfo] = useState({
     HoTen: "",
     SoDienThoai: "",
@@ -57,6 +69,20 @@ function CheckoutPage() {
   const total = cart.reduce((sum, item) => {
     return sum + Number(item.DonGia) * Number(item.SoLuong);
   }, 0);
+
+  let discount = 0;
+
+  if (appliedPromo) {
+    if (appliedPromo.LoaiGiamGia === "PhanTram") {
+      discount = (total * Number(appliedPromo.GiaTriGiam)) / 100;
+    } else if (appliedPromo.LoaiGiamGia === "SoTien") {
+      discount = Number(appliedPromo.GiaTriGiam);
+    }
+
+    discount = Math.min(discount, total);
+  }
+
+  const finalTotal = Math.max(total - discount, 0);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -111,17 +137,20 @@ function CheckoutPage() {
         MaNguoiDung,
         ...info,
         items: cart,
-        TongTien: total,
+        TongTien: finalTotal,
       });
 
       if (info.PhuongThucThanhToan === "BANK") {
-        const momoRes = await axios.post(
-          "http://localhost:5000/payment/momo",
-          {
-            amount: total,
-            MaDonHang: checkoutRes.data.MaDonHang,
-          }
-        );
+        const momoRes = await axios.post("http://localhost:5000/payment/momo", {
+          amount: finalTotal,
+          MaDonHang: checkoutRes.data.MaDonHang,
+        });
+
+        // if (appliedPromo) {
+        //   localStorage.setItem("lastOrderPromo", appliedPromo.TenKhuyenMai);
+        // } else {
+        //   localStorage.removeItem("lastOrderPromo");
+        // }
 
         if (momoRes.data.payUrl) {
           localStorage.removeItem("checkoutItems");
@@ -298,9 +327,16 @@ function CheckoutPage() {
                 <strong>Miễn phí</strong>
               </div>
 
+              {appliedPromo && discount > 0 && (
+                <div className="summary-row">
+                  <span>Khuyến mãi</span>
+                  <strong>-{discount.toLocaleString()}đ</strong>
+                </div>
+              )}
+
               <div className="summary-total">
                 <span>Tổng cộng</span>
-                <strong>{total.toLocaleString()}đ</strong>
+                <strong>{finalTotal.toLocaleString()}đ</strong>
               </div>
 
               <button type="submit" className="order-btn">

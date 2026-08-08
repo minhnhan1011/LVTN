@@ -7,6 +7,7 @@ function HomeProduct() {
   const [newProducts, setNewProducts] = useState([]);
   const [nikeProducts, setNikeProducts] = useState([]);
   const [adidasProducts, setAdidasProducts] = useState([]);
+  const [promoProducts, setPromoProducts] = useState([]);
 
   useEffect(() => {
     axios
@@ -22,6 +23,11 @@ function HomeProduct() {
     axios
       .get("http://localhost:5000/home/adidas-products")
       .then((res) => setAdidasProducts(res.data))
+      .catch((err) => console.log(err));
+
+    axios
+      .get("http://localhost:5000/home/promo-products")
+      .then((res) => setPromoProducts(res.data))
       .catch((err) => console.log(err));
   }, []);
 
@@ -40,7 +46,11 @@ function HomeProduct() {
   };
 
   const renderCard = (item) => {
-    const finalPrice = calcDiscountPrice(item.DonGia || 0, item.KhuyenMai || 0, item.LoaiGiamGia);
+    const finalPrice = calcDiscountPrice(
+      item.DonGia || 0,
+      item.KhuyenMai || 0,
+      item.LoaiGiamGia,
+    );
 
     return (
       <Link
@@ -114,7 +124,9 @@ function HomeProduct() {
           </Link>
         </div>
 
-        <div className="home-product-scroll">{nikeProducts.map(renderCard)}</div>
+        <div className="home-product-scroll">
+          {nikeProducts.map(renderCard)}
+        </div>
       </section>
 
       <section className="home-products">
@@ -131,6 +143,23 @@ function HomeProduct() {
 
         <div className="home-product-scroll">
           {adidasProducts.map(renderCard)}
+        </div>
+      </section>
+
+      <section className="home-products">
+        <div className="home-products-header row">
+          <div>
+            <span>Khuyến mãi</span>
+            <h2>Sản phẩm khuyến mãi</h2>
+          </div>
+
+          <Link to="/productpage?promo=true" className="view-more-btn">
+            Xem thêm
+          </Link>
+        </div>
+
+        <div className="home-product-scroll">
+          {promoProducts.map(renderCard)}
         </div>
       </section>
     </>

@@ -9,6 +9,8 @@ function Cart() {
 
   const [cart, setCart] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [promoCode, setPromoCode] = useState("");
+  const [discount, setDiscount] = useState(0);
 
   const MaNguoiDung = localStorage.getItem("MaNguoiDung");
 
@@ -20,8 +22,6 @@ function Cart() {
     if (!MaNguoiDung) {
       const guestCart = JSON.parse(localStorage.getItem("guestCart") || "[]");
 
-
-      
       setCart(guestCart);
       setSelectedItems([]);
       return;
@@ -160,8 +160,28 @@ function Cart() {
     selectedItems.includes(getCartItemId(item)),
   );
 
+  const calcDiscountPrice = (price, discount, loaiGiamGia) => {
+    const gia = Number(price);
+    const giam = Number(discount || 0);
+
+    if (loaiGiamGia === "PhanTram") {
+      return gia - (gia * giam) / 100;
+    }
+
+    if (loaiGiamGia === "SoTien") {
+      return Math.max(gia - giam, 0);
+    }
+
+    return gia;
+  };
+
   const total = selectedCart.reduce((sum, item) => {
-    return sum + Number(item.DonGia) * Number(item.SoLuong);
+    const finalPrice = calcDiscountPrice(
+      item.DonGiaGoc,
+      item.KhuyenMai,
+      item.LoaiGiamGia,
+    );
+    return sum + finalPrice * Number(item.SoLuong);
   }, 0);
 
   const handleCheckout = () => {
@@ -206,6 +226,39 @@ function Cart() {
 
     // Đã đăng nhập thì sang checkout
     navigate("/checkout");
+  };
+
+  const handlePromoCodeChange = (e) => {
+    setPromoCode(e.target.value);
+  };
+
+  const handleApplyPromo = async () => {
+    try {
+      const res = await axios.post("http://localhost:5000/check-promo", {
+        TenKhuyenMai: promoCode,
+      });
+
+      const promo = res.data;
+
+      let discount = 0;
+
+      if (promo.LoaiGiamGia === "PhanTram") {
+        discount = (total * Number(promo.GiaTriGiam)) / 100;
+      } else if (promo.LoaiGiamGia === "SoTien") {
+        discount = Number(promo.GiaTriGiam);
+      }
+
+      const finalDiscount = Math.min(discount, total);
+      setDiscount(finalDiscount);
+      localStorage.setItem("appliedPromo", JSON.stringify(promo));
+
+      alert(`Áp dụng mã khuyến mãi thành công.`);
+    } catch (err) {
+      setDiscount(0);
+      localStorage.removeItem("appliedPromo");
+
+      alert(err.response?.data?.message || "Mã khuyến mãi không hợp lệ");
+    }
   };
 
   return (
@@ -270,7 +323,12 @@ function Cart() {
                       )}
 
                       {Number(item.KhuyenMai) > 0 && (
-                        <p className="cart-sale-text">Giảm {item.KhuyenMai}%</p>
+                        <p className="cart-sale-text">
+                          Giảm{" "}
+                          {item.LoaiGiamGia === "PhanTram"
+                            ? `${item.KhuyenMai}%`
+                            : `${Number(item.KhuyenMai).toLocaleString()}đ`}
+                        </p>
                       )}
 
                       <div className="cart-qty">
@@ -302,7 +360,11 @@ function Cart() {
 
                     <strong>
                       {(
-                        Number(item.DonGia) * Number(item.SoLuong)
+                        calcDiscountPrice(
+                          item.DonGiaGoc,
+                          item.KhuyenMai,
+                          item.LoaiGiamGia,
+                        ) * Number(item.SoLuong)
                       ).toLocaleString()}
                       đ
                     </strong>
@@ -323,7 +385,9 @@ function Cart() {
               <div className="checkout-row">
                 <span>Tạm tính</span>
 
-                <strong>{total.toLocaleString()}đ</strong>
+                <strong>
+                  {Math.max(total - discount, 0).toLocaleString()}đ
+                </strong>
               </div>
 
               <div className="checkout-row">
@@ -332,10 +396,24 @@ function Cart() {
                 <strong>Miễn phí</strong>
               </div>
 
+              <div className="promo-code">
+                <input
+                  type="text"
+                  placeholder="Mã khuyến mãi"
+                  value={promoCode}
+                  onChange={handlePromoCodeChange}
+                />
+                <button className="apply-promo-btn" onClick={handleApplyPromo}>
+                  Áp dụng
+                </button>
+              </div>
+
               <div className="checkout-total">
                 <span>Tổng cộng</span>
 
-                <strong>{total.toLocaleString()}đ</strong>
+                <strong>
+                  {Math.max(total - discount, 0).toLocaleString()}đ
+                </strong>
               </div>
 
               <button className="checkout-btn" onClick={handleCheckout}>
