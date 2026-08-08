@@ -70,8 +70,18 @@ function DetailProduct() {
     return <h2>Đang tải...</h2>;
   }
 
-  const calcDiscountPrice = (price, discount) => {
-    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  const calcDiscountPrice = (price, discount, loaiGiamGia) => {
+    const gia = Number(price);
+    const giam = Number(discount || 0);
+
+    if (loaiGiamGia === "PhanTram") {
+      return gia - (gia * giam) / 100;
+    }
+
+    if (loaiGiamGia === "SoTien") {
+      return Math.max(gia - giam, 0);
+    }
+    return gia;
   };
 
   const uniqueColors = [
@@ -90,7 +100,7 @@ function DetailProduct() {
     (item) => item.TenMauSac === selectedColor && item.TenSize === selectedSize,
   );
 
-  const finalPrice = calcDiscountPrice(product.DonGia, product.KhuyenMai);
+  const finalPrice = calcDiscountPrice(product.DonGia, product.KhuyenMai, product.LoaiGiamGia);
 
   const handleAddCart = async () => {
     if (!selectedColor) {
@@ -156,10 +166,10 @@ function DetailProduct() {
         newCart = oldCart.map((item) =>
           item.MaBienThe === selectedVariant.MaBienThe
             ? {
-                ...item,
-                SoLuong: newQuantity,
-                SoLuongTonKho: Number(selectedVariant.SoLuong),
-              }
+              ...item,
+              SoLuong: newQuantity,
+              SoLuongTonKho: Number(selectedVariant.SoLuong),
+            }
             : item,
         );
       } else {
@@ -287,7 +297,9 @@ function DetailProduct() {
                 <p className="detail-price">{finalPrice.toLocaleString()}đ</p>
 
                 <span className="detail-discount-badge">
-                  -{product.KhuyenMai}%
+                  {product.LoaiGiamGia === "PhanTram"
+                    ? `-${Number(product.KhuyenMai)}%`
+                    : `-${Number(product.KhuyenMai).toLocaleString("vi-VN")}đ`}
                 </span>
               </div>
             ) : (
@@ -450,7 +462,7 @@ function DetailProduct() {
 
                     {user &&
                       Number(user.MaNguoiDung) ===
-                        Number(comment.MaNguoiDung) && (
+                      Number(comment.MaNguoiDung) && (
                         <button
                           type="button"
                           className="delete-comment-btn"

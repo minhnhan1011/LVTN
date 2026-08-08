@@ -25,12 +25,22 @@ function HomeProduct() {
       .catch((err) => console.log(err));
   }, []);
 
-  const calcDiscountPrice = (price, discount) => {
-    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  const calcDiscountPrice = (price, discount, loaiGiamGia) => {
+    const gia = Number(price);
+    const giam = Number(discount || 0);
+
+    if (loaiGiamGia === "PhanTram") {
+      return gia - (gia * giam) / 100;
+    }
+
+    if (loaiGiamGia === "SoTien") {
+      return Math.max(gia - giam, 0);
+    }
+    return gia;
   };
 
   const renderCard = (item) => {
-    const finalPrice = calcDiscountPrice(item.DonGia || 0, item.KhuyenMai || 0);
+    const finalPrice = calcDiscountPrice(item.DonGia || 0, item.KhuyenMai || 0, item.LoaiGiamGia);
 
     return (
       <Link
@@ -49,7 +59,11 @@ function HomeProduct() {
           />
 
           {Number(item.KhuyenMai) > 0 && (
-            <span className="home-discount-badge">-{item.KhuyenMai}%</span>
+            <span className="home-discount-badge">
+              {item.LoaiGiamGia === "PhanTram"
+                ? `-${Number(item.KhuyenMai)}%`
+                : `-${Number(item.KhuyenMai).toLocaleString("vi-VN")}đ`}
+            </span>
           )}
         </div>
 

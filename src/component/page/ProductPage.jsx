@@ -60,8 +60,18 @@ function ProductPage() {
     }
   }, [brandFromUrl]);
 
-  const calcDiscountPrice = (price, discount) => {
-    return Number(price) - (Number(price) * Number(discount || 0)) / 100;
+  const calcDiscountPrice = (price, discount, loaiGiamGia) => {
+    const gia = Number(price);
+    const giam = Number(discount || 0);
+
+    if (loaiGiamGia === "PhanTram") {
+      return gia - (gia * giam) / 100;
+    }
+
+    if (loaiGiamGia === "SoTien") {
+      return Math.max(gia - giam, 0);
+    }
+    return gia;
   };
 
   const handleFilterChange = (e) => {
@@ -92,7 +102,8 @@ function ProductPage() {
     const productName = item.TenSanPham || "";
     const finalPrice = calcDiscountPrice(
       item.DonGia || 0,
-      item.KhuyenMai || 0
+      item.KhuyenMai || 0,
+      item.LoaiGiamGia
     );
 
     const matchSearch =
@@ -135,6 +146,7 @@ function ProductPage() {
       matchPrice
     );
   });
+  ;
 
   return (
     <>
@@ -148,9 +160,8 @@ function ProductPage() {
 
           <div className="quick-category-list">
             <button
-              className={`quick-category-btn ${
-                filters.type === "" ? "active" : ""
-              }`}
+              className={`quick-category-btn ${filters.type === "" ? "active" : ""
+                }`}
               onClick={() => handleQuickTypeFilter("")}
             >
               Tất cả
@@ -159,9 +170,8 @@ function ProductPage() {
             {productTypes.map((item) => (
               <button
                 key={item.MaLoaiSanPham}
-                className={`quick-category-btn ${
-                  filters.type === item.TenLoaiSanPham ? "active" : ""
-                }`}
+                className={`quick-category-btn ${filters.type === item.TenLoaiSanPham ? "active" : ""
+                  }`}
                 onClick={() =>
                   handleQuickTypeFilter(item.TenLoaiSanPham)
                 }
@@ -263,10 +273,10 @@ function ProductPage() {
               {searchKeyword
                 ? `Kết quả tìm kiếm: ${searchKeyword}`
                 : filters.type
-                ? filters.type
-                : filters.brand
-                ? `Sản phẩm ${filters.brand}`
-                : "Tất cả sản phẩm"}
+                  ? filters.type
+                  : filters.brand
+                    ? `Sản phẩm ${filters.brand}`
+                    : "Tất cả sản phẩm"}
             </h1>
 
             <p>{filteredProducts.length} sản phẩm</p>
@@ -281,7 +291,8 @@ function ProductPage() {
               {filteredProducts.map((item) => {
                 const finalPrice = calcDiscountPrice(
                   item.DonGia || 0,
-                  item.KhuyenMai || 0
+                  item.KhuyenMai || 0,
+                  item.LoaiGiamGia
                 );
 
                 return (
@@ -318,7 +329,9 @@ function ProductPage() {
                           </strong>
 
                           <span className="discount-badge">
-                            -{item.KhuyenMai}%
+                            {item.LoaiGiamGia === "PhanTram"
+                              ? `-${Number(item.KhuyenMai)}%`
+                              : `-${Number(item.KhuyenMai).toLocaleString("vi-VN")}đ`}
                           </span>
                         </div>
                       ) : (

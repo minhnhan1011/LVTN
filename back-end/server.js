@@ -895,6 +895,7 @@ app.get("/products", (req, res) => {
       sp.DonGia,
       sp.MaKhuyenMai,
       km.GiaTriGiam AS KhuyenMai,
+      km.LoaiGiamGia,
       sp.MoTa,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
@@ -918,11 +919,13 @@ app.get("/products", (req, res) => {
       sp.TenSanPham,
       sp.DonGia,
       sp.MaKhuyenMai,
+      km.GiaTriGiam,
+      km.LoaiGiamGia,
       sp.MoTa,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
       ha.DuongDan
-      having sum(bt.SoLuong) > 0
+    HAVING SUM(bt.SoLuong) > 0
     ORDER BY sp.MaSanPham DESC
   `;
 
@@ -945,6 +948,7 @@ app.get("/product/:id", (req, res) => {
       sp.DonGia,
       sp.MaKhuyenMai,
       km.GiaTriGiam AS KhuyenMai,
+      km.LoaiGiamGia,
       sp.MoTa,
       lsp.TenLoaiSanPham,
       th.TenThuongHieu,
@@ -1205,6 +1209,7 @@ app.get("/home/new-products", (req, res) => {
       sp.DonGia,
       sp.MaKhuyenMai,
       km.GiaTriGiam AS KhuyenMai,
+      km.LoaiGiamGia,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
@@ -1223,6 +1228,7 @@ app.get("/home/new-products", (req, res) => {
       sp.DonGia,
       sp.MaKhuyenMai,
       km.GiaTriGiam,
+      km.LoaiGiamGia,
       th.TenThuongHieu,
       ha.DuongDan
     HAVING SUM(sl.SoLuong) > 0
@@ -1243,11 +1249,14 @@ app.get("/home/nike-products", (req, res) => {
       sp.TenSanPham,
       sp.DonGia,
       sp.MaKhuyenMai,
+      km.GiaTriGiam AS KhuyenMai,
+      km.LoaiGiamGia,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN khuyenmai km ON sp.MaKhuyenMai = km.MaKhuyenMai
     left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
     WHERE th.TenThuongHieu = 'Nike'
     AND sp.TrangThai = 'DangBan'
@@ -1270,11 +1279,14 @@ app.get("/home/adidas-products", (req, res) => {
       sp.TenSanPham,
       sp.DonGia,
       sp.MaKhuyenMai,
+      km.GiaTriGiam AS KhuyenMai,
+      km.LoaiGiamGia,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN khuyenmai km ON sp.MaKhuyenMai = km.MaKhuyenMai
     left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
     WHERE th.TenThuongHieu = 'Adidas'
     AND sp.TrangThai = 'DangBan'
@@ -2171,6 +2183,66 @@ app.post("/admin/promotions", (req, res) => {
 
       return res.json({
         message: "Khuyến mãi đã được thêm"
+      });
+    }
+  );
+});
+
+app.put("/admin/promotions/:MaKhuyenMai", (req, res) => {
+  const { MaKhuyenMai } = req.params;
+  const {
+    TenKhuyenMai,
+    LoaiGiamGia,
+    GiaTriGiam,
+    NgayBatDau,
+    NgayKetThuc,
+    TrangThai
+  } = req.body;
+
+  const ngayHienTai = new Date();
+  if (new Date(NgayKetThuc) < ngayHienTai) {
+    return res.status(400).json({
+      message: "Ngày kết thúc không được nhỏ hơn ngày hiện tại"
+    });
+  }
+
+  // const soTien = Number(GiaTriGiam);
+  // if (soTien <= 0) {
+  //   return res.status(400).json({
+  //     message: "Giá trị giảm phải lớn hơn 0"
+  //   });
+  // }
+
+  const sql = `
+    UPDATE khuyenmai
+    SET TenKhuyenMai = ?,
+        LoaiGiamGia = ?,
+        GiaTriGiam = ?,
+        NgayBatDau = ?,
+        NgayKetThuc = ?,
+        TrangThai = ?
+    WHERE MaKhuyenMai = ?
+  `;
+
+  db.query(
+    sql,
+    [
+      TenKhuyenMai,
+      LoaiGiamGia,
+      GiaTriGiam,
+      NgayBatDau,
+      NgayKetThuc,
+      TrangThai,
+      MaKhuyenMai
+    ],
+    (err, data) => {
+      if (err) {
+        return res.status(500).json(err);
+      }
+
+      console.log("Khuyến mãi đã được cập nhật:");
+      return res.json({
+        message: "Khuyến mãi đã được cập nhật"
       });
     }
   );
