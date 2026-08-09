@@ -146,12 +146,6 @@ function CheckoutPage() {
           MaDonHang: checkoutRes.data.MaDonHang,
         });
 
-        // if (appliedPromo) {
-        //   localStorage.setItem("lastOrderPromo", appliedPromo.TenKhuyenMai);
-        // } else {
-        //   localStorage.removeItem("lastOrderPromo");
-        // }
-
         if (momoRes.data.payUrl) {
           localStorage.removeItem("checkoutItems");
 

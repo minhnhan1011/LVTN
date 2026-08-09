@@ -208,6 +208,10 @@ function Cart() {
       }
     }
 
+    if (discount <= 0) {
+      localStorage.removeItem("appliedPromo");
+    }
+
     // Lưu sản phẩm người dùng đã chọn
     localStorage.setItem("checkoutItems", JSON.stringify(selectedCart));
 
