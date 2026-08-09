@@ -2064,56 +2064,6 @@ app.get("/admin/orders/:MaDonHang", (req, res) => {
   });
 });
 
-//momo thanh toán
-// app.get("/momo/return", (req, res) => {
-//   console.log("MOMO RETURN:", req.query);
-
-//   const { orderId, resultCode } = req.query;
-//   const MaDonHang = String(orderId).split("_")[0];
-
-//   if (Number(resultCode) === 0) {
-//     db.query(
-//       `
-//       UPDATE donhang
-//       SET TrangThai = 'ChoXacNhan'
-//       WHERE MaDonHang = ?
-//       `,
-//       [MaDonHang],
-//       (err) => {
-//         if (err) {
-//           console.log("Lỗi update donhang return:", err);
-//           return res.redirect("http://localhost:3000/orderpage");
-//         }
-
-//         db.query(
-//           `
-//           UPDATE thanhtoan
-//           SET TrangThai = 'DaThanhToan'
-//           WHERE MaDonHang = ?
-//           `,
-//           [MaDonHang],
-//           (err2) => {
-//             if (err2) console.log("Lỗi update thanhtoan return:", err2);
-
-//             return res.redirect("http://localhost:3000/orderpage");
-//           }
-//         );
-//       }
-//     );
-//   } else {
-//     db.query(
-//       `
-//       UPDATE donhang
-//       SET TrangThai = 'ThanhToanThatBai'
-//       WHERE MaDonHang = ?
-//       `,
-//       [MaDonHang],
-//       () => {
-//         return res.redirect("http://localhost:3000/orderpage");
-//       }
-//     );
-//   }
-// });
 
 // api lấy danh sách khuyến mãi
 app.get("/admin/promotions", (req, res) => {
@@ -2161,6 +2111,14 @@ app.post("/admin/promotions", (req, res) => {
     req.body;
 
   const MaKhuyenMai = crypto.randomUUID();
+  const GiaTriGiamNumber = Number(GiaTriGiam);
+
+  if (GiaTriGiamNumber <= 0 || isNaN(GiaTriGiamNumber)|| GiaTriGiamNumber > 100) {
+    console.log("Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100");
+    return res.status(400).json({
+      message: "Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100"
+    });
+  }
 
   const sql = `
     INSERT INTO khuyenmai

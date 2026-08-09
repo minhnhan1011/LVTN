@@ -85,8 +85,8 @@ function PromoAdmin() {
 
         const soGiam = Number(data.GiaTriGiam);
 
-        if (isNaN(soGiam) || soGiam < 0) {
-            alert("Giá trị giảm phải là một số không âm");
+        if (isNaN(soGiam) || soGiam < 0 || (data.LoaiGiamGia === "PhanTram" && soGiam > 100)) {
+            alert("Giá trị giảm phải đúng");
             return;
         }
         

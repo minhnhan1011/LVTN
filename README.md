@@ -1,70 +1,171 @@
-# Getting Started with Create React App
+# HƯỚNG DẪN CÀI ĐẶT VÀ CHẠY SOURCE CODE
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 1. Yêu cầu môi trường
 
-## Available Scripts
+Để chạy được hệ thống website, máy tính cần cài đặt các phần mềm sau:
 
-In the project directory, you can run:
+* **Node.js**: dùng để chạy Back-end Node.js và cài đặt các thư viện cần thiết.
+* **MySQL**: dùng để lưu trữ và quản lý cơ sở dữ liệu.
+* **Visual Studio Code**: dùng để mở và chạy source code.
+* **Trình duyệt Web**: Google Chrome, Microsoft Edge hoặc các trình duyệt tương đương.
 
-### `npm start`
+## 2. Cài đặt cơ sở dữ liệu
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Bước 1: Khởi động MySQL.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+Bước 2: Tạo một cơ sở dữ liệu mới trong MySQL.
 
-### `npm test`
+Bước 3: Import file `.sql` được cung cấp trong source code vào MySQL.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Có thể sử dụng MySQL Workbench hoặc phpMyAdmin để thực hiện import cơ sở dữ liệu.
 
-### `npm run build`
+Sau khi import thành công, kiểm tra các bảng dữ liệu đã được tạo đầy đủ.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Bước 4: Kiểm tra thông tin kết nối cơ sở dữ liệu trong source Back-end, bao gồm:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+* Host
+* User
+* Password
+* Database
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+Ví dụ:
 
-### `npm run eject`
+```javascript
+const db = mysql.createConnection({
+    host: "localhost",
+    user: "root",
+    password: "",
+    database: "qlbangiay"
+});
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+Thay đổi các thông tin trên cho phù hợp với cấu hình MySQL trên máy đang sử dụng.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## 3. Cài đặt và chạy Back-end
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+Bước 1: Mở thư mục Back-end bằng Visual Studio Code.
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+Bước 2: Mở Terminal trong Visual Studio Code.
 
-## Learn More
+Bước 3: Cài đặt các thư viện cần thiết bằng lệnh:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```bash
+npm install
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+Lệnh trên sẽ tự động cài đặt các thư viện được khai báo trong file `package.json`.
 
-### Code Splitting
+Bước 4: Sau khi cài đặt hoàn tất, chạy Back-end bằng lệnh:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```bash
+node server.js
+```
 
-### Analyzing the Bundle Size
+Nếu dự án sử dụng `nodemon`, có thể chạy bằng:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+npm start
+```
 
-### Making a Progressive Web App
+hoặc:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+```bash
+npm run dev
+```
 
-### Advanced Configuration
+tùy theo cấu hình trong file `package.json`.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+Khi Terminal hiển thị thông báo Server đã chạy và kết nối MySQL thành công thì Back-end đã được khởi động.
 
-### Deployment
+## 4. Cài đặt và chạy Front-end
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+Bước 1: Mở thư mục Front-end bằng Visual Studio Code.
 
-### `npm run build` fails to minify
+Bước 2: Mở Terminal tại thư mục Front-end.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+Bước 3: Cài đặt các thư viện bằng lệnh:
+
+```bash
+npm install
+```
+
+Bước 4: Sau khi quá trình cài đặt hoàn tất, chạy Front-end bằng lệnh:
+
+```bash
+npm start
+```
+
+Nếu dự án được tạo bằng Vite thì sử dụng:
+
+```bash
+npm run dev
+```
+
+Sau khi chạy thành công, Terminal sẽ hiển thị địa chỉ website, ví dụ:
+
+```text
+http://localhost:3000
+```
+
+hoặc:
+
+```text
+http://localhost:5173
+```
+
+Mở địa chỉ được hiển thị trên trình duyệt để sử dụng website.
+
+## 5. Thứ tự chạy chương trình
+
+Để hệ thống hoạt động đúng, thực hiện theo thứ tự sau:
+
+**Bước 1:** Khởi động MySQL.
+
+**Bước 2:** Kiểm tra cơ sở dữ liệu đã được import.
+
+**Bước 3:** Chạy Back-end Node.js.
+
+**Bước 4:** Chạy Front-end ReactJS.
+
+**Bước 5:** Truy cập đường dẫn localhost của Front-end trên trình duyệt.
+
+## 6. Một số lỗi thường gặp
+
+### Lỗi không kết nối được MySQL
+
+Kiểm tra lại:
+
+* MySQL đã được khởi động hay chưa.
+* Tên database có chính xác hay không.
+* User và Password MySQL.
+* Cổng kết nối MySQL.
+
+### Lỗi thiếu thư viện
+
+Nếu xuất hiện lỗi liên quan đến package hoặc module, chạy lại:
+
+```bash
+npm install
+```
+
+tại đúng thư mục Front-end hoặc Back-end bị lỗi.
+
+### Lỗi Front-end không gọi được Back-end
+
+Kiểm tra Back-end đã được chạy hay chưa và kiểm tra địa chỉ API trong Front-end.
+
+Ví dụ:
+
+```javascript
+http://localhost:5000
+```
+
+Cổng API phải trùng với cổng mà Back-end đang sử dụng.
+
+### Lỗi cổng đã được sử dụng
+
+Nếu xuất hiện thông báo cổng đang được sử dụng, cần tắt chương trình đang chiếm cổng đó hoặc thay đổi port của chương trình.
+
+## 7. Hoàn tất
+
+Sau khi Front-end, Back-end và MySQL đều hoạt động bình thường, người dùng có thể truy cập website thông qua trình duyệt và sử dụng các chức năng của hệ thống.
