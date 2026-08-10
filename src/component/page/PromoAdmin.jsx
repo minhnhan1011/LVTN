@@ -37,6 +37,7 @@ function PromoAdmin() {
             GiaTriGiam: formData.get("giaTriGiam"),
             NgayBatDau: formData.get("ngayBatDau"),
             NgayKetThuc: formData.get("ngayKetThuc"),
+            TrangThai: "HoatDong",
         };
 
         axios
@@ -89,7 +90,8 @@ function PromoAdmin() {
             alert("Giá trị giảm phải đúng");
             return;
         }
-        
+
+
         axios
             .put(
                 `http://localhost:5000/admin/promotions/${editPromotion.MaKhuyenMai}`,
@@ -281,7 +283,13 @@ function PromoAdmin() {
                                 <label>Trạng thái:</label>
                                 <select
                                     name="trangThai"
-                                    defaultValue={editPromotion.TrangThai}
+                                    value={editPromotion.TrangThai}
+                                    onChange={(e) =>
+                                        setEditPromotion({
+                                            ...editPromotion,
+                                            TrangThai: e.target.value
+                                        })
+                                    }
                                     required
                                 >
                                     <option value="HoatDong">Hoạt động</option>
@@ -308,6 +316,7 @@ function PromoAdmin() {
                     <table className="promo-table">
                         <thead>
                             <tr>
+                                <th>Mã khuyến mãi</th>
                                 <th>Tên khuyến mãi</th>
                                 <th>Loại giảm</th>
                                 <th>Giá trị giảm</th>
@@ -322,7 +331,7 @@ function PromoAdmin() {
                             {promotions.length > 0 ? (
                                 promotions.map((item) => (
                                     <tr key={item.MaKhuyenMai}>
-                                        {/* <td>{item.MaKhuyenMai}</td> */}
+                                        <td>{item.MaKhuyenMai}</td>
 
                                         <td>{item.TenKhuyenMai}</td>
 

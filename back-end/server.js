@@ -2068,17 +2068,16 @@ app.get("/admin/orders/:MaDonHang", (req, res) => {
 // api lấy danh sách khuyến mãi
 app.get("/admin/promotions", (req, res) => {
   const sql = `
-    SELECT
-      MaKhuyenMai,
-      TenKhuyenMai,
-      LoaiGiamGia,
-      GiaTriGiam,
-      NgayBatDau,
-      NgayKetThuc,
-      TrangThai
-    FROM khuyenmai
-    ORDER BY TenKhuyenMai ASC
-  `;
+        SELECT
+            MaKhuyenMai,
+            TenKhuyenMai,
+            LoaiGiamGia,
+            GiaTriGiam,
+            DATE_FORMAT(NgayBatDau, '%Y-%m-%d') AS NgayBatDau,
+            DATE_FORMAT(NgayKetThuc, '%Y-%m-%d') AS NgayKetThuc,
+            TrangThai
+        FROM khuyenmai
+    `;
 
   db.query(sql, (err, data) => {
     if (err) {
@@ -2113,7 +2112,7 @@ app.post("/admin/promotions", (req, res) => {
   const MaKhuyenMai = crypto.randomUUID();
   const GiaTriGiamNumber = Number(GiaTriGiam);
 
-  if (GiaTriGiamNumber <= 0 || isNaN(GiaTriGiamNumber)|| GiaTriGiamNumber > 100) {
+  if (GiaTriGiamNumber <= 0 || isNaN(GiaTriGiamNumber) || GiaTriGiamNumber > 100) {
     console.log("Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100");
     return res.status(400).json({
       message: "Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100"
@@ -2176,7 +2175,6 @@ app.put("/admin/promotions/:MaKhuyenMai", (req, res) => {
       message: "Ngày kết thúc không được nhỏ hơn ngày hiện tại",
     });
   }
-
   // const soTien = Number(GiaTriGiam);
   // if (soTien <= 0) {
   //   return res.status(400).json({
@@ -2210,6 +2208,8 @@ app.put("/admin/promotions/:MaKhuyenMai", (req, res) => {
       if (err) {
         return res.status(500).json(err);
       }
+
+      console.log("Khuyến mãi đã được cập nhật:", data);
 
       console.log("Khuyến mãi đã được cập nhật:");
       return res.json({
