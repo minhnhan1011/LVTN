@@ -32,6 +32,7 @@ function PromoAdmin() {
         const formData = new FormData(e.target);
 
         const data = {
+            MaKhuyenMai: formData.get("maKhuyenMai"),
             TenKhuyenMai: formData.get("tenKhuyenMai"),
             LoaiGiamGia: formData.get("loaiGiamGia"),
             GiaTriGiam: formData.get("giaTriGiam"),
@@ -157,6 +158,16 @@ function PromoAdmin() {
                         <h2>Thêm khuyến mãi</h2>
 
                         <form onSubmit={handleAddPromotion}>
+                            <div className="form-group">
+                                <label htmlFor="tenKhuyenMai">Mã khuyến mãi:</label>
+                                <input
+                                    type="text"
+                                    id="maKhuyenMai"
+                                    name="maKhuyenMai"
+                                    required
+                                />
+                            </div>
+
                             <div className="form-group">
                                 <label htmlFor="tenKhuyenMai">Tên khuyến mãi:</label>
                                 <input

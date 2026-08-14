@@ -239,7 +239,7 @@ function Cart() {
   const handleApplyPromo = async () => {
     try {
       const res = await axios.post("http://localhost:5000/check-promo", {
-        TenKhuyenMai: promoCode,
+        MaKhuyenMai: promoCode,
       });
 
       const promo = res.data;

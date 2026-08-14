@@ -1930,7 +1930,7 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
       // don da tru kho roi, admin huy don thi phai hoan kho
       if (
         TrangThai === "DaHuy" &&
-        ["DaXacNhan", "DangGiao"].includes(oldStatus)
+        ["DaXacNhan", "DangGiao","HoanThanh"].includes(oldStatus)
       ) {
         const sqlRestoreStock = `
           UPDATE sanpham_bienthe bt
@@ -2106,14 +2106,17 @@ app.delete("/admin/promotions/:MaKhuyenMai", (req, res) => {
 });
 
 app.post("/admin/promotions", (req, res) => {
-  const { TenKhuyenMai, LoaiGiamGia, GiaTriGiam, NgayBatDau, NgayKetThuc } =
+  const { MaKhuyenMai, TenKhuyenMai, LoaiGiamGia, GiaTriGiam, NgayBatDau, NgayKetThuc } =
     req.body;
 
-  const MaKhuyenMai = crypto.randomUUID();
   const GiaTriGiamNumber = Number(GiaTriGiam);
 
-  if (GiaTriGiamNumber <= 0 || isNaN(GiaTriGiamNumber) || GiaTriGiamNumber > 100) {
-    console.log("Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100");
+  if (GiaTriGiamNumber == 'SoTien' && GiaTriGiamNumber <= 0) {
+    return res.status(400).json({
+      message: "Giá trị giảm phải lớn hơn 0"
+    });
+  }
+  else if (LoaiGiamGia === 'PhanTram' && (GiaTriGiamNumber <= 0 || GiaTriGiamNumber > 100)) {
     return res.status(400).json({
       message: "Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100"
     });
@@ -2221,17 +2224,17 @@ app.put("/admin/promotions/:MaKhuyenMai", (req, res) => {
 
 //api ma khuyen mai ben gio hang
 app.post("/check-promo", (req, res) => {
-  const { TenKhuyenMai } = req.body;
+  const { MaKhuyenMai } = req.body;
 
   const sql = `
     SELECT *
     FROM khuyenmai
-    WHERE TenKhuyenMai = ?
+    WHERE MaKhuyenMai = ?
       AND TrangThai = 'HoatDong'
       AND CURDATE() BETWEEN DATE(NgayBatDau) AND DATE(NgayKetThuc)
   `;
 
-  db.query(sql, [TenKhuyenMai], (err, data) => {
+  db.query(sql, [MaKhuyenMai], (err, data) => {
     if (err) {
       return res.status(500).json(err);
     }
@@ -2241,6 +2244,8 @@ app.post("/check-promo", (req, res) => {
         message: "Mã khuyến mãi không hợp lệ hoặc đã hết hạn",
       });
     }
+
+    console.log( 400, "Mã khuyến mãi hợp lệ:", data[0]);
 
     return res.json(data[0]);
   });
