@@ -24,28 +24,6 @@ function Login() {
     });
   };
 
-  // Đồng bộ giỏ hàng khách vào database
-  const syncGuestCart = async (MaNguoiDung) => {
-    const guestCart = JSON.parse(
-      localStorage.getItem("guestCart") || "[]",
-    );
-
-    if (guestCart.length === 0) {
-      return;
-    }
-
-    for (const item of guestCart) {
-      await axios.post("http://localhost:5000/cart", {
-        MaNguoiDung: MaNguoiDung,
-        MaBienThe: item.MaBienThe,
-        SoLuong: Number(item.SoLuong),
-      });
-    }
-
-    // Chỉ xóa sau khi đồng bộ thành công
-    localStorage.removeItem("guestCart");
-  };
-
   const handleLogin = async (e) => {
     e.preventDefault();
 
@@ -77,26 +55,13 @@ function Login() {
         String(MaNguoiDung),
       );
 
-      // Admin không cần đồng bộ giỏ hàng
+      // Xóa giỏ hàng guest sau khi đăng nhập
+      localStorage.removeItem("guestCart");
+
+      // Admin
       if (vaitro === "Admin") {
         alert("Đăng nhập thành công");
         navigate("/admin");
-        return;
-      }
-
-      try {
-        await syncGuestCart(MaNguoiDung);
-      } catch (syncError) {
-        console.error(
-          "Lỗi đồng bộ giỏ hàng:",
-          syncError.response?.data || syncError,
-        );
-
-        alert(
-          syncError.response?.data?.message ||
-            "Đăng nhập thành công nhưng đồng bộ giỏ hàng thất bại",
-        );
-
         return;
       }
 
@@ -151,25 +116,12 @@ function Login() {
         String(MaNguoiDung),
       );
 
+      // Xóa giỏ hàng guest sau khi đăng nhập Google
+      localStorage.removeItem("guestCart");
+
       if (vaitro === "Admin") {
         alert("Đăng nhập Google thành công");
         navigate("/admin");
-        return;
-      }
-
-      try {
-        await syncGuestCart(MaNguoiDung);
-      } catch (syncError) {
-        console.error(
-          "Lỗi đồng bộ giỏ hàng:",
-          syncError.response?.data || syncError,
-        );
-
-        alert(
-          syncError.response?.data?.message ||
-            "Đăng nhập thành công nhưng đồng bộ giỏ hàng thất bại",
-        );
-
         return;
       }
 

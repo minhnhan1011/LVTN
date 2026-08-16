@@ -232,12 +232,36 @@ function Cart() {
     navigate("/checkout");
   };
 
+  const promoEligibleTotal = selectedCart.reduce((sum, item) => {
+    if (item.MaKhuyenMai) {
+      return sum;
+    }
+
+    const finalPrice = calcDiscountPrice(
+      item.DonGiaGoc,
+      item.KhuyenMai,
+      item.LoaiGiamGia,
+    );
+
+    return sum + finalPrice * Number(item.SoLuong);
+  }, 0);
+
   const handlePromoCodeChange = (e) => {
     setPromoCode(e.target.value);
   };
 
   const handleApplyPromo = async () => {
     try {
+      if (promoEligibleTotal <= 0) {
+        setDiscount(0);
+        localStorage.removeItem("appliedPromo");
+
+        alert(
+          "Sản phẩm đã khuyến mãi không thể áp dụng thêm khuyến mãi khác",
+        );
+        return;
+      }
+
       const res = await axios.post("http://localhost:5000/check-promo", {
         MaKhuyenMai: promoCode,
       });
@@ -247,16 +271,17 @@ function Cart() {
       let discount = 0;
 
       if (promo.LoaiGiamGia === "PhanTram") {
-        discount = (total * Number(promo.GiaTriGiam)) / 100;
+        discount = (promoEligibleTotal * Number(promo.GiaTriGiam)) / 100;
       } else if (promo.LoaiGiamGia === "SoTien") {
         discount = Number(promo.GiaTriGiam);
       }
 
-      const finalDiscount = Math.min(discount, total);
+      const finalDiscount = Math.min(discount, promoEligibleTotal);
+
       setDiscount(finalDiscount);
       localStorage.setItem("appliedPromo", JSON.stringify(promo));
 
-      alert(`Áp dụng mã khuyến mãi thành công.`);
+      alert("Áp dụng mã khuyến mãi thành công.");
     } catch (err) {
       setDiscount(0);
       localStorage.removeItem("appliedPromo");

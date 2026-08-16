@@ -1309,11 +1309,14 @@ app.get("/home/promo-products", (req, res) => {
       sp.TenSanPham,
       sp.DonGia,
       sp.MaKhuyenMai,
+      km.GiaTriGiam AS KhuyenMai,
+      km.LoaiGiamGia,
       th.TenThuongHieu,
       ha.DuongDan
     FROM sanpham sp
     LEFT JOIN thuonghieu th ON sp.MaThuongHieu = th.MaThuongHieu
     LEFT JOIN hinhanh ha ON sp.MaSanPham = ha.MaSanPham
+    LEFT JOIN khuyenmai km ON sp.MaKhuyenMai = km.MaKhuyenMai
     left join sanpham_bienthe sl on sp.MaSanPham = sl.MaSanPham
     WHERE sp.TrangThai = 'DangBan'
     AND sp.MaKhuyenMai is not NULL
@@ -1332,109 +1335,141 @@ app.post("/cart", (req, res) => {
   const { MaNguoiDung, MaBienThe, SoLuong } = req.body;
 
   if (!MaNguoiDung || !MaBienThe || Number(SoLuong) <= 0) {
-    return res.status(400).json({ message: "Dữ liệu giỏ hàng không hợp lệ" });
+    return res.status(400).json({
+      message: "Dữ liệu giỏ hàng không hợp lệ",
+    });
   }
-
+  // Tìm giỏ hàng của người dùng
   const sqlFindCart = `
-    SELECT MaGioHang 
-    FROM giohang 
+    SELECT MaGioHang
+    FROM giohang
     WHERE MaNguoiDung = ?
   `;
 
   db.query(sqlFindCart, [MaNguoiDung], (err, cartData) => {
-    if (err) return res.status(500).json(err);
+    if (err) {
+      console.log(err);
+      return res.status(500).json(err);
+    }
 
     const handleCartDetail = (maGioHang) => {
+      // Kiểm tra biến thể đã tồn tại trong giỏ chưa
       const sqlCheckItem = `
-        SELECT * 
+        SELECT *
         FROM giohangchitiet
-        WHERE MaGioHang = ? AND MaBienThe = ?
+        WHERE MaGioHang = ?
+        AND MaBienThe = ?
       `;
 
       db.query(sqlCheckItem, [maGioHang, MaBienThe], (err2, itemData) => {
-        if (err2) return res.status(500).json(err2);
-
+        if (err2) {
+          console.log(err2);
+          return res.status(500).json(err2);
+        }
         if (itemData.length > 0) {
-          const sqlUpdate = `
-            UPDATE giohangchitiet
-            SET SoLuong = SoLuong + ?
-            WHERE MaGioHang = ? AND MaBienThe = ?
+          return res.json({
+            status: "AlreadyExists",
+            message: "Sản phẩm đã có trong giỏ hàng",
+          });
+        }
+        const sqlPrice = `
+            SELECT
+              sp.DonGia,
+              sp.MaKhuyenMai,
+              km.GiaTriGiam,
+              km.LoaiGiamGia,
+
+              CASE
+                WHEN km.LoaiGiamGia = 'PhanTram'
+                  THEN sp.DonGia - (sp.DonGia * km.GiaTriGiam / 100)
+
+                WHEN km.LoaiGiamGia = 'SoTien'
+                  THEN GREATEST(sp.DonGia - km.GiaTriGiam, 0)
+
+                ELSE sp.DonGia
+              END AS GiaSauGiam
+
+            FROM sanpham_bienthe bt
+
+            JOIN sanpham sp
+              ON bt.MaSanPham = sp.MaSanPham
+
+            LEFT JOIN khuyenmai km
+              ON sp.MaKhuyenMai = km.MaKhuyenMai
+
+            WHERE bt.MaBienThe = ?
           `;
 
-          db.query(sqlUpdate, [SoLuong, maGioHang, MaBienThe], (err3) => {
-            if (err3) return res.status(500).json(err3);
-            return res.json({ status: "Success" });
-          });
-        } else {
-          const sqlPrice = `
-  SELECT
-    sp.DonGia,
-    sp.MaKhuyenMai,
-    km.GiaTriGiam,
-    km.LoaiGiamGia,
+        db.query(sqlPrice, [MaBienThe], (err4, priceData) => {
+          if (err4) {
+            console.log(err4);
+            return res.status(500).json(err4);
+          }
 
-    CASE
-      WHEN km.LoaiGiamGia = 'PhanTram'
-        THEN sp.DonGia - (sp.DonGia * km.GiaTriGiam / 100)
+          if (priceData.length === 0) {
+            return res.status(404).json({
+              message: "Không tìm thấy biến thể",
+            });
+          }
 
-      WHEN km.LoaiGiamGia = 'SoTien'
-        THEN GREATEST(sp.DonGia - km.GiaTriGiam, 0)
-
-      ELSE sp.DonGia
-    END AS GiaSauGiam
-
-  FROM sanpham_bienthe bt
-  JOIN sanpham sp ON bt.MaSanPham = sp.MaSanPham
-  LEFT JOIN khuyenmai km ON sp.MaKhuyenMai = km.MaKhuyenMai
-
-  WHERE bt.MaBienThe = ?
-`;
-
-          db.query(sqlPrice, [MaBienThe], (err4, priceData) => {
-            if (err4) return res.status(500).json(err4);
-            if (priceData.length === 0) {
-              return res
-                .status(404)
-                .json({ message: "Không tìm thấy biến thể" });
-            }
-
-            const sqlInsertItem = `
+          const sqlInsertItem = `
               INSERT INTO giohangchitiet
-              (MaGioHangChiTiet, MaGioHang, MaBienThe, SoLuong, DonGia)
+              (
+                MaGioHangChiTiet,
+                MaGioHang,
+                MaBienThe,
+                SoLuong,
+                DonGia
+              )
               VALUES (?, ?, ?, ?, ?)
             `;
 
-            db.query(
-              sqlInsertItem,
-              [
-                crypto.randomUUID(),
-                maGioHang,
-                MaBienThe,
-                SoLuong,
-                priceData[0].GiaSauGiam,
-              ],
-              (err5) => {
-                if (err5) return res.status(500).json(err5);
-                return res.json({ status: "Success" });
-              },
-            );
-          });
-        }
+          db.query(
+            sqlInsertItem,
+            [
+              crypto.randomUUID(),
+              maGioHang,
+              MaBienThe,
+              Number(SoLuong),
+              priceData[0].GiaSauGiam,
+            ],
+            (err5) => {
+              if (err5) {
+                console.log(err5);
+                return res.status(500).json(err5);
+              }
+
+              return res.json({
+                status: "Success",
+                message: "Đã thêm sản phẩm vào giỏ hàng",
+              });
+            },
+          );
+        });
       });
     };
-
     if (cartData.length > 0) {
       handleCartDetail(cartData[0].MaGioHang);
-    } else {
+    }
+    else {
       const maGioHang = crypto.randomUUID();
 
       const sqlCreateCart = `
-        INSERT INTO giohang (MaGioHang, MaNguoiDung, TongTien)
+        INSERT INTO giohang
+        (
+          MaGioHang,
+          MaNguoiDung,
+          TongTien
+        )
         VALUES (?, ?, 0)
       `;
 
       db.query(sqlCreateCart, [maGioHang, MaNguoiDung], (err6) => {
-        if (err6) return res.status(500).json(err6);
+        if (err6) {
+          console.log(err6);
+          return res.status(500).json(err6);
+        }
+
         handleCartDetail(maGioHang);
       });
     }
@@ -1930,7 +1965,7 @@ app.put("/admin/orders/:MaDonHang/status", (req, res) => {
       // don da tru kho roi, admin huy don thi phai hoan kho
       if (
         TrangThai === "DaHuy" &&
-        ["DaXacNhan", "DangGiao","HoanThanh"].includes(oldStatus)
+        ["DaXacNhan", "DangGiao", "HoanThanh"].includes(oldStatus)
       ) {
         const sqlRestoreStock = `
           UPDATE sanpham_bienthe bt
@@ -2064,7 +2099,6 @@ app.get("/admin/orders/:MaDonHang", (req, res) => {
   });
 });
 
-
 // api lấy danh sách khuyến mãi
 app.get("/admin/promotions", (req, res) => {
   const sql = `
@@ -2106,19 +2140,27 @@ app.delete("/admin/promotions/:MaKhuyenMai", (req, res) => {
 });
 
 app.post("/admin/promotions", (req, res) => {
-  const { MaKhuyenMai, TenKhuyenMai, LoaiGiamGia, GiaTriGiam, NgayBatDau, NgayKetThuc } =
-    req.body;
+  const {
+    MaKhuyenMai,
+    TenKhuyenMai,
+    LoaiGiamGia,
+    GiaTriGiam,
+    NgayBatDau,
+    NgayKetThuc,
+  } = req.body;
 
   const GiaTriGiamNumber = Number(GiaTriGiam);
 
-  if (GiaTriGiamNumber == 'SoTien' && GiaTriGiamNumber <= 0) {
+  if (GiaTriGiamNumber == "SoTien" && GiaTriGiamNumber <= 0) {
     return res.status(400).json({
-      message: "Giá trị giảm phải lớn hơn 0"
+      message: "Giá trị giảm phải lớn hơn 0",
     });
-  }
-  else if (LoaiGiamGia === 'PhanTram' && (GiaTriGiamNumber <= 0 || GiaTriGiamNumber > 100)) {
+  } else if (
+    LoaiGiamGia === "PhanTram" &&
+    (GiaTriGiamNumber <= 0 || GiaTriGiamNumber > 100)
+  ) {
     return res.status(400).json({
-      message: "Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100"
+      message: "Giá trị giảm phải lớn hơn 0 và nhỏ hơn hoặc bằng 100",
     });
   }
 
@@ -2245,7 +2287,7 @@ app.post("/check-promo", (req, res) => {
       });
     }
 
-    console.log( 400, "Mã khuyến mãi hợp lệ:", data[0]);
+    console.log(400, "Mã khuyến mãi hợp lệ:", data[0]);
 
     return res.json(data[0]);
   });

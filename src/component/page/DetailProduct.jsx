@@ -15,7 +15,6 @@ function DetailProduct() {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
 
-
   const [comments, setComments] = useState([]);
   const [commentContent, setCommentContent] = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
@@ -100,7 +99,11 @@ function DetailProduct() {
     (item) => item.TenMauSac === selectedColor && item.TenSize === selectedSize,
   );
 
-  const finalPrice = calcDiscountPrice(product.DonGia, product.KhuyenMai, product.LoaiGiamGia);
+  const finalPrice = calcDiscountPrice(
+    product.DonGia,
+    product.KhuyenMai,
+    product.LoaiGiamGia,
+  );
 
   const handleAddCart = async () => {
     if (!selectedColor) {
@@ -138,10 +141,13 @@ function DetailProduct() {
         TenMauSac: selectedColor,
         TenSize: selectedSize,
         SoLuong: quantity,
-        SoLuongTonKho: Number(selectedVariant.SoLuong), // <-- thêm dòng này
+        SoLuongTonKho: Number(selectedVariant.SoLuong),
+
         DonGia: finalPrice,
         DonGiaGoc: product.DonGia,
         KhuyenMai: product.KhuyenMai || 0,
+        LoaiGiamGia: product.LoaiGiamGia,
+
         DuongDan: product.DuongDan,
       };
 
@@ -166,10 +172,10 @@ function DetailProduct() {
         newCart = oldCart.map((item) =>
           item.MaBienThe === selectedVariant.MaBienThe
             ? {
-              ...item,
-              SoLuong: newQuantity,
-              SoLuongTonKho: Number(selectedVariant.SoLuong),
-            }
+                ...item,
+                SoLuong: newQuantity,
+                SoLuongTonKho: Number(selectedVariant.SoLuong),
+              }
             : item,
         );
       } else {
@@ -462,7 +468,7 @@ function DetailProduct() {
 
                     {user &&
                       Number(user.MaNguoiDung) ===
-                      Number(comment.MaNguoiDung) && (
+                        Number(comment.MaNguoiDung) && (
                         <button
                           type="button"
                           className="delete-comment-btn"
