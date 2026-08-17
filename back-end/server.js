@@ -1293,7 +1293,7 @@ app.get("/home/adidas-products", (req, res) => {
     GROUP BY sp.MaSanPham
     having sum(sl.SoLuong) > 0
     ORDER BY sp.MaSanPham DESC
-    LIMIT 8
+    LIMIT 4
   `;
 
   db.query(sql, (err, data) => {
@@ -1321,7 +1321,7 @@ app.get("/home/promo-products", (req, res) => {
     WHERE sp.TrangThai = 'DangBan'
     AND sp.MaKhuyenMai is not NULL
     ORDER BY sp.MaSanPham DESC
-    LIMIT 8
+    LIMIT 4
   `;
 
   db.query(sql, (err, data) => {
