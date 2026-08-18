@@ -215,18 +215,7 @@ function Cart() {
     // Lưu sản phẩm người dùng đã chọn
     localStorage.setItem("checkoutItems", JSON.stringify(selectedCart));
 
-    const currentUserId = localStorage.getItem("MaNguoiDung");
-
-    // Chưa đăng nhập thì chuyển sang login
-    if (!currentUserId) {
-      navigate("/login", {
-        state: {
-          redirectTo: "/cart",
-        },
-      });
-
-      return;
-    }
+    navigate("/checkout");
 
     // Đã đăng nhập thì sang checkout
     navigate("/checkout");

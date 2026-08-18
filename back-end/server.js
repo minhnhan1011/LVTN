@@ -1633,7 +1633,6 @@ app.post("/checkout", async (req, res) => {
 
   // kiểm tra dữ liệu
   if (
-    !MaNguoiDung ||
     !HoTen ||
     !SoDienThoai ||
     !DiaChiChiTiet ||

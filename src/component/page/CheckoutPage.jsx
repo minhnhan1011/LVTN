@@ -127,11 +127,6 @@ function CheckoutPage() {
 
     const MaNguoiDung = localStorage.getItem("MaNguoiDung");
 
-    if (!MaNguoiDung) {
-      alert("Bạn cần đăng nhập để đặt hàng");
-      return;
-    }
-
     try {
       const checkoutRes = await axios.post("http://localhost:5000/checkout", {
         MaNguoiDung,
